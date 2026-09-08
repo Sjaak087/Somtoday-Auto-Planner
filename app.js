@@ -89,12 +89,20 @@ const placeholder = $("#iframePlaceholder");
 
 function showSomtodayFrame() {
   placeholder.classList.add("hidden");
-  $("#embedHint").textContent = "Somtoday wordt geladen…";
+  frame.classList.add("active");
+  $("#embedHint").textContent = "Rooster wordt geladen…";
   frame.src = `https://leerling.somtoday.nl/rooster?ts=${Date.now()}`;
   setTimeout(() => {
-    $("#embedHint").textContent = "Ingebouwde weergave — afhankelijk van Somtoday/browserbeveiliging";
-  }, 1500);
+    $("#embedHint").textContent = "Somtoday rooster";
+  }, 1800);
 }
+
+// The site cannot read Somtoday's authentication cookie or inspect its login state
+// because Somtoday is a separate origin. This button is therefore the explicit handoff
+// point after the user logs in on the official Somtoday site.
+$("#somtodayLogin").addEventListener("click", () => {
+  $("#embedHint").textContent = "Somtoday-login geopend in een nieuwe tab";
+});
 
 $("#showRoster").addEventListener("click", showSomtodayFrame);
 $("#reloadFrame").addEventListener("click", showSomtodayFrame);

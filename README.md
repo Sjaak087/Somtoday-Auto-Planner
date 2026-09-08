@@ -1,26 +1,28 @@
 # SchoolPortaal — Somtoday + Firebase
 
-GitHub Pages-klare website met een verplichte Firebase-login en een Somtoday-roosterpagina.
+GitHub Pages-klare schoolportaal-demo met:
 
-## Wat doet de site?
-
-1. Je moet eerst inloggen met Firebase Authentication (e-mail + wachtwoord).
-2. Daarna verschijnt de site en het tabblad **Rooster**.
-3. Via **Inloggen bij Somtoday** wordt de officiële Somtoday-login geopend.
-4. Na je Somtoday-login kun je **Rooster tonen** proberen; de site laadt dan `https://leerling.somtoday.nl/rooster`.
+- Firebase Authentication voor de toegang tot de website.
+- Los `firebase-config.js` bestand voor de Firebase webconfig.
+- Firebase Realtime Database health check.
+- Tab **Rooster** met een koppeling naar de officiële Somtoday leerlingomgeving.
+- Weeknavigatie in de portalinterface.
 
 ## Belangrijk over Somtoday-login
 
-De website neemt je Somtoday-wachtwoord niet over en probeert geen wachtwoorden of sessiecookies te onderscheppen. Somtoday beheert de eigen login.
+Somtoday gebruikt een eigen sessie/cookie op een ander domein. Een gewone GitHub Pages-site kan die sessie niet uitlezen of afdwingen. Daarom werkt de flow zo:
 
-Een GitHub Pages-site kan bovendien niet garanderen dat de ingelogde Somtoday-pagina in een iframe wordt weergegeven. Dat hangt af van Somtoday-beveiligingsheaders en browser privacy/third-party cookiebeleid. Als inbedding wordt geblokkeerd, gebruik **Open rooster in Somtoday** voor de officiële pagina.
+1. Log in via **Inloggen bij Somtoday**.
+2. Ga terug naar deze site.
+3. Klik **Ik ben ingelogd**.
+4. De site laadt daarna `https://leerling.somtoday.nl/rooster` in de ingebouwde weergave.
 
-## Firebase instellen
+Een browser kan het ingebouwde Somtoday-scherm alsnog blokkeren wanneer Somtoday iframe-embedding of third-party cookies beperkt. In dat geval gebruik je **Open rooster in Somtoday**.
 
-Zet in Firebase Console bij **Authentication → Sign-in method** de provider **Email/Password** aan.
+## Firebase Authentication activeren
 
-Controleer daarna bij **Realtime Database → Rules** dat alleen geauthenticeerde gebruikers toegang krijgen tot de nodes die de site moet lezen. Gebruik geen openbare `read: true` / `write: true` regels voor persoonlijke gegevens.
+Zet in Firebase Console bij Authentication → Sign-in method → Email/Password aan.
 
 ## GitHub Pages
 
-Upload alle bestanden naar de repository-root en activeer **Settings → Pages → Deploy from a branch → main → /(root)**.
+Upload de inhoud van deze map naar een GitHub-repository en zet GitHub Pages aan voor de branch/map waarin `index.html` staat.
