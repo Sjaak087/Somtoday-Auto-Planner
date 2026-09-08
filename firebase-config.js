@@ -1,7 +1,6 @@
-// Firebase configuratie staat bewust in een apart bestand.
-// Firebase documentatie: web-config bevat niet-geheime project/app-identifiers.
+// Firebase configuratie. Deze web-config bevat geen geheim wachtwoord.
 export const firebaseConfig = {
-  apiKey: "AIzaSyCLIitv_qfqA5XnSRI_UEwZfJotyiOoK2",
+  apiKey: "AIzaSyCLIitv_qfqA5XnSRI_UEwZfJotyiOoK0",
   authDomain: "somtoday-auto-planner.firebaseapp.com",
   databaseURL: "https://somtoday-auto-planner-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "somtoday-auto-planner",

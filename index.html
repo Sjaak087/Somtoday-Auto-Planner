@@ -8,27 +8,17 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="authScreen" class="auth-screen">
-    <div class="auth-card">
-      <div class="brand-mark large">SP</div>
-      <span class="eyebrow">Persoonlijke schoolomgeving</span>
+  <div id="authScreen" class="auth-screen somtoday-auth">
+    <div class="som-auth-card">
       <h1>Inloggen</h1>
-      <p class="muted">Log eerst in op SchoolPortaal. Daarna kun je via de officiële Somtoday-login naar je rooster.</p>
-
-      <form id="loginForm" class="auth-form">
-        <label for="email">E-mailadres</label>
-        <input id="email" type="email" autocomplete="email" required placeholder="jij@example.nl">
-        <label for="password">Wachtwoord</label>
-        <input id="password" type="password" autocomplete="current-password" required placeholder="••••••••">
-        <button class="primary full" type="submit">Inloggen</button>
-        <button class="secondary full" id="registerBtn" type="button">Account maken</button>
+      <div class="school-pill"><span>LVOa</span><button id="clearSchool" type="button" aria-label="School verwijderen">×</button></div>
+      <form id="loginForm" class="auth-form som-form">
+        <input id="email" type="email" autocomplete="username" required placeholder="E-mailadres / gebruikersnaam">
+        <label class="remember-row"><input id="rememberUsername" type="checkbox" checked><span class="checkmark"></span><span>Onthoud mijn gebruikersnaam</span></label>
+        <button class="primary full som-login-button" type="submit">Inloggen</button>
         <p id="authMessage" class="auth-message" aria-live="polite"></p>
       </form>
-
-      <div class="auth-note">
-        <strong>Somtoday-login</strong>
-        <span>Je Somtoday-wachtwoord wordt niet door deze website opgeslagen. De officiële Somtoday-site verzorgt die login.</span>
-      </div>
+      <div class="som-auth-help">Na deze stap opent de officiële Somtoday-login. Je Somtoday-wachtwoord wordt niet door deze GitHub-site ontvangen.</div>
     </div>
   </div>
 
@@ -85,11 +75,11 @@
             <div class="toolbar-main">
               <div class="section-kicker">Somtoday</div>
               <h2>Rooster</h2>
-              <p class="muted">Open Somtoday en log daar in. Daarna kun je hier je rooster laden.</p>
+              <p class="muted">Log in via Somtoday. Daarna proberen we de officiële roosterpagina hieronder te tonen.</p>
             </div>
             <div class="toolbar-actions">
               <a class="primary link-button" id="somtodayLogin" href="https://inloggen.somtoday.nl/" target="_blank" rel="noopener">Inloggen bij Somtoday ↗</a>
-              <button class="secondary" id="showRoster">Ik ben ingelogd</button>
+              <button class="secondary" id="showRoster">Rooster tonen</button>
               <button class="secondary" id="reloadFrame">Vernieuwen</button>
             </div>
           </div>
@@ -117,8 +107,8 @@
               <div class="iframe-placeholder" id="iframePlaceholder">
                 <div class="fallback-icon">↗</div>
                 <h3>Log eerst in bij Somtoday</h3>
-                <p>Open Somtoday in een nieuwe tab, log daar in en klik daarna op “Ik ben ingelogd”. Deze website vraagt nooit om je Somtoday-wachtwoord.</p>
-                <a class="primary link-button" href="https://inloggen.somtoday.nl/" target="_blank" rel="noopener">Somtoday openen ↗</a>
+                <p>Open de officiële Somtoday-login. De website vraagt nooit om je Somtoday-wachtwoord.</p>
+                <a class="primary link-button" href="https://inloggen.somtoday.nl/" target="_blank" rel="noopener">Somtoday openen</a>
               </div>
               <iframe id="somtodayFrame" title="Somtoday rooster" src="about:blank" loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
             </div>

@@ -1,28 +1,9 @@
-# SchoolPortaal — Somtoday + Firebase
+# Somtoday GitHub-site
 
-GitHub Pages-klare schoolportaal-demo met:
+GitHub Pages-klare schoolsite met losse Firebase-config en een Somtoday-stijl login.
 
-- Firebase Authentication voor de toegang tot de website.
-- Los `firebase-config.js` bestand voor de Firebase webconfig.
-- Firebase Realtime Database health check.
-- Tab **Rooster** met een koppeling naar de officiële Somtoday leerlingomgeving.
-- Weeknavigatie in de portalinterface.
+De site vraagt geen Somtoday-wachtwoord en stuurt geen wachtwoord naar Firebase of GitHub. Na het invullen van school/gebruikersnaam wordt de officiële Somtoday-login geopend via `https://inloggen.somtoday.nl/`.
 
-## Belangrijk over Somtoday-login
+Een gewone GitHub Pages-site kan de Somtoday-sessie niet uitlezen of een wachtwoord-login namens de leerling uitvoeren zonder een officiële Somtoday-integratie/API.
 
-Somtoday gebruikt een eigen sessie/cookie op een ander domein. Een gewone GitHub Pages-site kan die sessie niet uitlezen of afdwingen. Daarom werkt de flow zo:
-
-1. Log in via **Inloggen bij Somtoday**.
-2. Ga terug naar deze site.
-3. Klik **Ik ben ingelogd**.
-4. De site laadt daarna `https://leerling.somtoday.nl/rooster` in de ingebouwde weergave.
-
-Een browser kan het ingebouwde Somtoday-scherm alsnog blokkeren wanneer Somtoday iframe-embedding of third-party cookies beperkt. In dat geval gebruik je **Open rooster in Somtoday**.
-
-## Firebase Authentication activeren
-
-Zet in Firebase Console bij Authentication → Sign-in method → Email/Password aan.
-
-## GitHub Pages
-
-Upload de inhoud van deze map naar een GitHub-repository en zet GitHub Pages aan voor de branch/map waarin `index.html` staat.
+Controleer in Firebase Console of Anonymous Authentication is ingeschakeld als je de Firebase-loginstatus wilt gebruiken. Beveilig de Realtime Database met passende Security Rules.

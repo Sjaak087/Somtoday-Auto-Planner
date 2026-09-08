@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -45,43 +45,34 @@ $$('[data-go]').forEach((button) => button.addEventListener("click", () => activ
 
 $("#loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  setAuthMessage("Bezig met inloggen…");
-  try {
-    await signInWithEmailAndPassword(auth, $("#email").value.trim(), $("#password").value);
-    setAuthMessage("");
-  } catch (error) {
-    setAuthMessage(mapAuthError(error), true);
-  }
-});
-
-$("#registerBtn").addEventListener("click", async () => {
   const email = $("#email").value.trim();
-  const password = $("#password").value;
-  if (!email || !password) {
-    setAuthMessage("Vul eerst een e-mailadres en wachtwoord in.", true);
-    return;
-  }
-  setAuthMessage("Account wordt aangemaakt…");
+  if (!email) return;
+  localStorage.setItem("somtodayUsername", $("#rememberUsername").checked ? email : "");
+  setAuthMessage("Somtoday wordt geopend…");
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    setAuthMessage("Account aangemaakt.");
+    await signInAnonymously(auth);
+    window.open("https://inloggen.somtoday.nl/", "_blank", "noopener");
   } catch (error) {
-    setAuthMessage(mapAuthError(error), true);
+    console.warn("Firebase Anonymous Auth staat mogelijk nog niet aan:", error);
+    window.open("https://inloggen.somtoday.nl/", "_blank", "noopener");
+    showLocalApp(email);
   }
 });
 
-$("#logoutBtn").addEventListener("click", () => signOut(auth));
+$("#clearSchool").addEventListener("click", () => {
+  $(".school-pill span").textContent = "Kies school";
+});
 
-function mapAuthError(error) {
-  const codes = {
-    "auth/invalid-credential": "E-mailadres of wachtwoord is niet correct.",
-    "auth/invalid-email": "Vul een geldig e-mailadres in.",
-    "auth/email-already-in-use": "Er bestaat al een account met dit e-mailadres.",
-    "auth/weak-password": "Gebruik een sterker wachtwoord (minimaal 6 tekens).",
-    "auth/operation-not-allowed": "Firebase Email/Password-login staat nog niet aan. Zet deze provider aan in Firebase Console.",
-    "auth/too-many-requests": "Te veel pogingen. Probeer later opnieuw."
-  };
-  return codes[error.code] || "Inloggen is mislukt. Controleer je Firebase Authentication-instellingen.";
+const savedUsername = localStorage.getItem("somtodayUsername");
+if (savedUsername) $("#email").value = savedUsername;
+
+function showLocalApp(email) {
+  localStorage.setItem("siteAccess", "1");
+  $("#authScreen").classList.add("hidden");
+  $("#appShell").classList.remove("hidden");
+  $("#signedInAs").textContent = email || "Ingelogd";
+  $("#settingsEmail").textContent = email || "—";
+  activateTab("rooster");
 }
 
 const frame = $("#somtodayFrame");
@@ -89,20 +80,12 @@ const placeholder = $("#iframePlaceholder");
 
 function showSomtodayFrame() {
   placeholder.classList.add("hidden");
-  frame.classList.add("active");
-  $("#embedHint").textContent = "Rooster wordt geladen…";
+  $("#embedHint").textContent = "Somtoday wordt geladen…";
   frame.src = `https://leerling.somtoday.nl/rooster?ts=${Date.now()}`;
   setTimeout(() => {
-    $("#embedHint").textContent = "Somtoday rooster";
-  }, 1800);
+    $("#embedHint").textContent = "Ingebouwde weergave — afhankelijk van Somtoday/browserbeveiliging";
+  }, 1500);
 }
-
-// The site cannot read Somtoday's authentication cookie or inspect its login state
-// because Somtoday is a separate origin. This button is therefore the explicit handoff
-// point after the user logs in on the official Somtoday site.
-$("#somtodayLogin").addEventListener("click", () => {
-  $("#embedHint").textContent = "Somtoday-login geopend in een nieuwe tab";
-});
 
 $("#showRoster").addEventListener("click", showSomtodayFrame);
 $("#reloadFrame").addEventListener("click", showSomtodayFrame);
@@ -147,6 +130,9 @@ async function checkFirebase() {
 onAuthStateChanged(auth, (user) => {
   if (user) {
     showApp(user);
+    checkFirebase();
+  } else if (localStorage.getItem("siteAccess") === "1") {
+    showLocalApp(localStorage.getItem("somtodayUsername") || "");
     checkFirebase();
   } else {
     showLogin();

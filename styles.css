@@ -134,3 +134,18 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monos
   .login-helper { flex-direction: column; align-items: flex-start; }
   .top-actions .user-chip { display: none; }
 }
+
+/* Somtoday-stijl login */
+.somtoday-auth { background: #eef2f5; }
+.som-auth-card { width: min(540px, 100%); background: #fff; border-radius: 28px; box-shadow: 0 12px 30px rgba(24,33,43,.10); padding: 32px 42px 34px; }
+.som-auth-card h1 { color: #163f67; font-size: 29px; margin: 0 0 14px 18px; font-weight: 900; }
+.school-pill { height: 43px; border-radius: 24px; background: #ffbf26; padding: 0 15px 0 22px; display: flex; align-items: center; justify-content: space-between; color: #163f67; font-weight: 800; margin-bottom: 17px; }
+.school-pill button { border: 0; background: transparent; color: #003b72; font-size: 27px; font-weight: 900; line-height: 1; }
+.som-form { gap: 10px; }
+.som-form input[type=email] { height: 43px; border: 2px solid #d6dfe8; border-radius: 24px; padding: 0 20px; font-size: 15px; color: #163f67; }
+.remember-row { display: inline-flex !important; align-items: center; gap: 10px; font-size: 15px !important; font-weight: 500 !important; color: #163f67; cursor: pointer; margin: 0 0 20px 18px !important; }
+.remember-row input { position: absolute; opacity: 0; pointer-events: none; }
+.checkmark { width: 18px; height: 18px; border-radius: 5px; background: #ffbf26; position: relative; flex: 0 0 18px; }
+.remember-row input:checked + .checkmark::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #0a5aa6; border-width: 0 3px 3px 0; transform: rotate(45deg); }
+.som-login-button { width: 228px; height: 54px; justify-self: center; border-radius: 14px; background: #005baa; font-size: 18px; margin-top: 4px; }
+.som-auth-help { margin-top: 18px; padding: 13px 15px; border-radius: 12px; background: #f5f7f9; color: #667482; font-size: 12px; line-height: 1.55; }
