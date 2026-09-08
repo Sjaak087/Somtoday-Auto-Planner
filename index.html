@@ -80,6 +80,11 @@
             <button class="week-arrow" id="nextWeek" aria-label="Volgende week">›</button>
           </div>
 
+          <div class="roster-legend" aria-label="Legenda toetsmarkering">
+            <div class="legend-item"><span class="legend-dot legend-normal"></span> Les</div>
+            <div class="legend-item"><span class="legend-dot legend-small"></span> Kleine toets</div>
+            <div class="legend-item"><span class="legend-dot legend-big"></span> Toets</div>
+          </div>
           <div id="scheduleGrid" class="schedule-grid"></div>
           <div id="emptyState" class="empty-state">
             <div class="fallback-icon">▦</div>
@@ -98,6 +103,17 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div id="lessonModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-card">
+      <button class="modal-close" id="modalClose" type="button" aria-label="Sluiten">×</button>
+      <div id="modalBadge" class="modal-badge">Les</div>
+      <h2 id="modalTitle">Les</h2>
+      <div class="modal-date" id="modalDate"></div>
+      <div class="modal-details" id="modalDetails"></div>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>

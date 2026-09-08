@@ -245,3 +245,66 @@ h2{color:var(--som-blue-dark)}
   .content{padding:18px}
   .topbar{padding:17px 18px}
 }
+
+/* ===== Somtoday-like roster + assessments ===== */
+:root{
+  --som-orange:#f5a623;
+  --som-red:#e44b52;
+  --som-orange-soft:#fff4df;
+  --som-red-soft:#fff0f1;
+}
+body.modal-open{overflow:hidden}
+.roster-legend{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:10px 0 14px;padding:0 4px;color:#60778d;font-size:12px;font-weight:700}
+.legend-item{display:inline-flex;align-items:center;gap:7px}
+.legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.legend-normal{background:var(--som-blue)}
+.legend-small{background:var(--som-orange)}
+.legend-big{background:var(--som-red)}
+.day-head{padding:14px 14px 13px}
+.day-head > div{display:flex;align-items:center;gap:10px}
+.day-head.today{background:#eef7ff;border-bottom-color:#d4e7f7}
+.day-head em{font-style:normal;font-size:10px;font-weight:900;color:var(--som-blue);background:#dceefe;padding:4px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.3px}
+.lesson-card{display:block;width:calc(100% - 20px);border:1px solid #d9e5ef;text-align:left;cursor:pointer;background:#fff;transition:transform .13s ease,box-shadow .13s ease,border-color .13s ease}
+.lesson-card:hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(18,63,103,.10);border-color:#bdd5e8}
+.lesson-card:focus-visible{outline:3px solid rgba(0,90,169,.22);outline-offset:2px}
+.lesson-card.lesson-small-test{background:var(--som-orange-soft);border-color:#f2cf93}
+.lesson-card.lesson-small-test:before{background:var(--som-orange)}
+.lesson-card.lesson-big-test{background:var(--som-red-soft);border-color:#efb2b7}
+.lesson-card.lesson-big-test:before{background:var(--som-red)}
+.lesson-small-test .lesson-time{color:#b36c00}
+.lesson-big-test .lesson-time{color:#bc2e37}
+.lesson-small-test .lesson-subject{color:#8a5400}
+.lesson-big-test .lesson-subject{color:#a3222b}
+.lesson-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.assessment-badge{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.35px;padding:4px 7px;border-radius:999px;white-space:nowrap}
+.assessment-badge.small{background:#ffd98b;color:#805000}
+.assessment-badge.big{background:#f5a6ac;color:#8d2028}
+.meta-icon{display:inline-block;width:6px;height:6px;border-radius:50%;background:#91a7b9;margin-right:7px;vertical-align:middle}
+.import-card{background:linear-gradient(180deg,#fff,#fbfdff)}
+.week-strip{display:grid;align-items:center;gap:10px}
+.week-label{font-weight:900}
+
+.modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:22px}
+.modal-backdrop{position:absolute;inset:0;background:rgba(18,63,103,.38);backdrop-filter:blur(3px)}
+.modal-card{position:relative;width:min(560px,100%);background:#fff;border-radius:24px;box-shadow:0 24px 70px rgba(9,39,65,.26);padding:28px}
+.modal-close{position:absolute;right:16px;top:14px;border:0;background:#edf4f9;color:var(--som-blue-dark);width:36px;height:36px;border-radius:50%;font-size:25px;line-height:1}
+.modal-close:hover{background:#e1edf5}
+.modal-badge{display:inline-flex;padding:7px 10px;border-radius:999px;background:#e6f1fa;color:var(--som-blue);font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.modal-badge.small{background:#fff0cf;color:#9a6000}
+.modal-badge.big{background:#ffe0e2;color:#a0222c}
+.modal-card h2{font-size:25px;margin:0 44px 5px 0}
+.modal-date{color:#72869a;font-weight:700;font-size:13px;margin-bottom:20px}
+.modal-details{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-details > div{border:1px solid #e0e9f0;border-radius:14px;background:#f8fbfd;padding:13px 14px;min-width:0}
+.modal-details span{display:block;color:#8192a3;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.modal-details strong{display:block;color:var(--som-blue-dark);font-size:14px;line-height:1.35}
+.modal-details .detail-wide{grid-column:1/-1}
+.modal-details p{margin:0;color:#4f6578;white-space:pre-wrap;line-height:1.5;font-size:13px}
+.detail-empty{grid-column:1/-1;text-align:center;color:#8293a3;padding:20px !important}
+
+@media (max-width:760px){
+  .roster-legend{gap:11px}
+  .modal-card{padding:23px 18px 18px;border-radius:20px}
+  .modal-details{grid-template-columns:1fr}
+  .modal-details .detail-wide{grid-column:auto}
+}

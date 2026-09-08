@@ -43,32 +43,54 @@ function parseIcsDate(raw){
   return new Date(+Y,+Mo-1,+D,+h,+mi,+s);
 }
 function unfoldIcs(text){ return text.replace(/\r?\n[ \t]/g, ""); }
-function prop(lines,name){ const line=lines.find(x=>x.startsWith(name+":") || x.startsWith(name+";")); return line ? line.slice(line.indexOf(":")+1) : ""; }
-function parseICS(text){
-  const lines=unfoldIcs(text).split(/\r?\n/); const out=[]; let cur=null;
-  for(const line of lines){
-    if(line === "BEGIN:VEVENT"){ cur=[]; continue; }
-    if(line === "END:VEVENT" && cur){
-      const start=linesToEvent(cur); if(start) out.push(start); cur=null; continue;
-    }
-    if(cur) cur.push(line);
-  }
-  return out;
+function prop(lines,name){
+  const target=name.toUpperCase();
+  const line=lines.find(x=>x.toUpperCase().startsWith(target+":") || x.toUpperCase().startsWith(target+";"));
+  return line ? line.slice(line.indexOf(":")+1) : "";
 }
-function unescapeIcs(v){ return v.replace(/\\n/gi,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\"); }
+function propName(line){ return line.split(":",1)[0].split(";",1)[0].toUpperCase(); }
+function propValue(line){ return line.includes(":") ? line.slice(line.indexOf(":")+1) : ""; }
+function parseDescriptionFields(description){
+  const fields={};
+  description.split(/\\n|\n|\r/).map(x=>x.trim()).filter(Boolean).forEach(b=>{
+    const m=b.match(/^([^:]+):\s*(.*)$/);
+    if(m) fields[m[1].trim().toLowerCase()]=m[2].trim();
+  });
+  return fields;
+}
+function classifyAssessment(summary, description, categories, fields={}){
+  const hay=(summary+" "+description+" "+categories+" "+Object.values(fields).join(" ")).toLowerCase();
+  const small=/\b(kleine\s+toets|minitoets|mini[- ]?toets|s\.?o\.?|kt|k\.t\.)\b/.test(hay) || /kleine toets|minitoets|mini[- ]?toets/.test(hay);
+  const big=/\b(toets|proefwerk|tentamen|examen|pw)\b/.test(hay);
+  if(small) return "small";
+  if(big) return "big";
+  return "normal";
+}
 function linesToEvent(lines){
   const summary=unescapeIcs(prop(lines,"SUMMARY")||"Les");
   const location=unescapeIcs(prop(lines,"LOCATION")||"");
   const description=unescapeIcs(prop(lines,"DESCRIPTION")||"");
+  const categories=unescapeIcs(prop(lines,"CATEGORIES")||"");
   const dtstart=prop(lines,"DTSTART"); const dtend=prop(lines,"DTEND");
-  const start=parseIcsDate(dtstart); const end=parseIcsDate(dtend) || new Date(start?.getTime()+50*60000);
+  const start=parseIcsDate(dtstart); const end=parseIcsDate(dtend) || (start ? new Date(start.getTime()+50*60000) : null);
   if(!start) return null;
-  let subject=summary, teacher="", room=location;
-  const descBits=description.split(/\\n|\n/).map(x=>x.trim()).filter(Boolean);
-  for(const b of descBits){ if(/^docent|teacher/i.test(b)) teacher=b.replace(/^[^:]*:/i,"").trim(); }
-  if(!room){ const rb=descBits.find(b=>/^lokaal|room|locatie/i.test(b)); if(rb) room=rb.replace(/^[^:]*:/i,"").trim(); }
-  return {id:prop(lines,"UID") || crypto.randomUUID(), start, end, subject, teacher, room};
+  const fields=parseDescriptionFields(description);
+  let subject=unescapeIcs(fields.vak || fields.subject || summary);
+  let teacher=unescapeIcs(fields.docent || fields.teacher || "");
+  let room=location;
+  if(!room){ const rb=Object.entries(fields).find(([k])=>/^(lokaal|room|locatie)$/.test(k)); if(rb) room=unescapeIcs(rb[1]); }
+  const assessmentType=classifyAssessment(summary,description,categories,fields);
+  const assessment=assessmentType!=="normal" ? {
+    type: assessmentType,
+    title: unescapeIcs(fields.toets || fields.assessment || summary),
+    description: unescapeIcs(fields.omschrijving || fields.description || description),
+    weight: unescapeIcs(fields.weging || fields.weight || ""),
+    duration: unescapeIcs(fields.duur || fields.duration || "")
+  } : null;
+  return {id:prop(lines,"UID") || crypto.randomUUID(), start, end, subject, teacher, room, assessment, summary, description, categories};
 }
+function assessmentLabel(type){ return type === "small" ? "Kleine toets" : type === "big" ? "Toets" : "Les"; }
+function assessmentClass(type){ return type === "small" ? "lesson-small-test" : type === "big" ? "lesson-big-test" : ""; }
 
 function mondayFor(date){ const d=new Date(date); d.setHours(12,0,0,0); const day=d.getDay()||7; d.setDate(d.getDate()-day+1); return d; }
 function getWeekStart(){ const base=mondayFor(new Date()); base.setDate(base.getDate()+state.weekOffset*7); return base; }
@@ -85,10 +107,13 @@ function render(){
     const dayEvents=state.events.filter(ev=>dayKey(ev.start)===key).sort((a,b)=>a.start-b.start);
     if(dayEvents.length) any=true;
     const col=document.createElement("div"); col.className="day-column";
-    col.innerHTML=`<div class="day-head"><strong>${dayNames[i]}</strong><span>${new Intl.DateTimeFormat("nl-NL",{day:"numeric",month:"numeric"}).format(d)}</span></div>`;
+    const isToday=dayKey(new Date())===key;
+    col.innerHTML=`<div class="day-head ${isToday?"today":""}"><div><strong>${dayNames[i]}</strong><span>${new Intl.DateTimeFormat("nl-NL",{day:"numeric",month:"numeric"}).format(d)}</span></div>${isToday?'<em>vandaag</em>':''}</div>`;
     for(const ev of dayEvents){
-      const card=document.createElement("article"); card.className="lesson-card";
-      card.innerHTML=`<div class="lesson-time">${timeLabel(ev.start)}–${timeLabel(ev.end)}</div><div class="lesson-subject">${escapeHtml(ev.subject)}</div>${ev.room?`<div class="lesson-meta">📍 ${escapeHtml(ev.room)}</div>`:""}${ev.teacher?`<div class="lesson-meta">👤 ${escapeHtml(ev.teacher)}</div>`:""}`;
+      const card=document.createElement("button"); card.type="button"; card.className=`lesson-card ${assessmentClass(ev.assessment?.type)}`;
+      const badge=ev.assessment ? `<span class="assessment-badge ${ev.assessment.type}">${assessmentLabel(ev.assessment.type)}</span>` : "";
+      card.innerHTML=`<div class="lesson-top"><div class="lesson-time">${timeLabel(ev.start)}–${timeLabel(ev.end)}</div>${badge}</div><div class="lesson-subject">${escapeHtml(ev.subject)}</div>${ev.room?`<div class="lesson-meta"><span class="meta-icon">●</span>${escapeHtml(ev.room)}</div>`:""}${ev.teacher?`<div class="lesson-meta"><span class="meta-icon">●</span>${escapeHtml(ev.teacher)}</div>`:""}`;
+      card.addEventListener("click",()=>openLessonModal(ev));
       col.appendChild(card);
     }
     if(!dayEvents.length) col.insertAdjacentHTML("beforeend",`<div class="no-lessons">Geen lessen</div>`);
@@ -96,6 +121,32 @@ function render(){
   }
   empty.classList.toggle("hidden", any || state.events.length>0);
 }
+function openLessonModal(ev){
+  const modal=$("#lessonModal");
+  $("#modalBadge").textContent=ev.assessment ? assessmentLabel(ev.assessment.type) : "Les";
+  $("#modalBadge").className=`modal-badge ${ev.assessment?.type||"normal"}`;
+  $("#modalTitle").textContent=ev.subject;
+  const date=new Intl.DateTimeFormat("nl-NL",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"Europe/Amsterdam"}).format(ev.start);
+  $("#modalDate").textContent=`${date} · ${timeLabel(ev.start)} – ${timeLabel(ev.end)}`;
+  const rows=[];
+  if(ev.room) rows.push(`<div><span>Locatie</span><strong>${escapeHtml(ev.room)}</strong></div>`);
+  if(ev.teacher) rows.push(`<div><span>Docent</span><strong>${escapeHtml(ev.teacher)}</strong></div>`);
+  if(ev.assessment?.weight) rows.push(`<div><span>Weging</span><strong>${escapeHtml(ev.assessment.weight)}</strong></div>`);
+  if(ev.assessment?.duration) rows.push(`<div><span>Duur</span><strong>${escapeHtml(ev.assessment.duration)}</strong></div>`);
+  if(ev.assessment){
+    const text=ev.assessment.description && ev.assessment.description!==ev.summary ? ev.assessment.description : "Deze afspraak is als toets gemarkeerd in de agenda.";
+    rows.push(`<div class="detail-wide"><span>Toetsinformatie</span><p>${escapeHtml(text)}</p></div>`);
+  } else if(ev.description){
+    rows.push(`<div class="detail-wide"><span>Notities</span><p>${escapeHtml(ev.description)}</p></div>`);
+  }
+  $("#modalDetails").innerHTML=rows.length ? rows.join("") : `<div class="detail-empty">Geen extra informatie beschikbaar.</div>`;
+  modal.classList.remove("hidden"); document.body.classList.add("modal-open"); $("#modalClose").focus();
+}
+function closeLessonModal(){ $("#lessonModal").classList.add("hidden"); document.body.classList.remove("modal-open"); }
+$("#modalClose").addEventListener("click",closeLessonModal);
+$("#modalBackdrop").addEventListener("click",closeLessonModal);
+document.addEventListener("keydown",e=>{if(e.key==="Escape") closeLessonModal();});
+
 function escapeHtml(v){ return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 
 async function importText(text){
