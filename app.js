@@ -18,12 +18,58 @@ function parseDate(v){const m=String(v||"").match(/^(\d{4})(\d{2})(\d{2})T?(\d{2
 function unfold(s){return s.replace(/\r?\n[ \t]/g,"")}
 function val(lines,n){const l=lines.find(x=>x.toUpperCase().startsWith(n+":")||x.toUpperCase().startsWith(n+";"));return l?l.slice(l.indexOf(":")+1):""}
 function unesc(v){return String(v||"").replace(/\\n/g,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\")}
-function parseICS(text){const L=unfold(text).split(/\r?\n/),out=[];let cur=null;for(const l of L){if(l.trim()==="BEGIN:VEVENT")cur=[];else if(l.trim()==="END:VEVENT"){if(cur){const st=parseDate(val(cur,"DTSTART"));if(st){const en=parseDate(val(cur,"DTEND"))||new Date(st.getTime()+50*60000);const summary=unesc(val(cur,"SUMMARY")||"Les"),loc=unesc(val(cur,"LOCATION")),desc=unesc(val(cur,"DESCRIPTION"));const subject=unesc((desc.match(/(?:vak|subject)[:=]\s*([^\\n]+)/i)||[])[1]||summary).trim();out.push({id:val(cur,"UID")||crypto.randomUUID(),start:st,end:en,subject,teacher:"",room:loc,summary,description:desc})}}cur=null}else if(cur)cur.push(l)}return out}
+function detectAssessment(summary, description, categories, attachment, subject){
+  const text=[summary,description,categories,attachment,subject].filter(Boolean).join(" ").toLowerCase();
+  const normalized=text.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const small=["kleine toets","minitoets","mini toets","mini-toets","overhoring","formatieve toets","kleine s.o.","quiz","k.t.","kt "];
+  const big=["grote toets","toets","proefwerk","tentamen","examen","repetitie","summatieve toets","schoolexamen","pta","s.o."];
+  const clean=(x)=>x.trim();
+  if(small.some(x=>normalized.includes(clean(x)))) return "small";
+  if(big.some(x=>normalized.includes(clean(x)))) return "big";
+  return "";
+}
+function parseICS(text){
+  const L=unfold(text).split(/\r?\n/),out=[];let cur=null;
+  for(const l of L){
+    if(l.trim()==="BEGIN:VEVENT") cur=[];
+    else if(l.trim()==="END:VEVENT"){
+      if(cur){
+        const st=parseDate(val(cur,"DTSTART"));
+        if(st){
+          const en=parseDate(val(cur,"DTEND"))||new Date(st.getTime()+50*60000);
+          const summary=unesc(val(cur,"SUMMARY")||"Les");
+          const loc=unesc(val(cur,"LOCATION"));
+          const desc=unesc(val(cur,"DESCRIPTION"));
+          const cats=unesc(val(cur,"CATEGORIES"));
+          const attach=unesc(val(cur,"ATTACH"));
+          const subject=unesc((desc.match(/(?:vak|subject|course|class)[:=]\s*([^\n]+)/i)||[])[1]||summary).trim();
+          const assessment=detectAssessment(summary,desc,cats,attach,subject);
+          out.push({id:val(cur,"UID")||crypto.randomUUID(),start:st,end:en,subject,teacher:unesc(val(cur,"ORGANIZER")||""),room:loc,summary,description:desc,categories:cats,attachment:attach,assessment});
+        }
+      }
+      cur=null;
+    } else if(cur) cur.push(l)
+  }
+  return out
+}
 function testTypeLabel(t){return t==="small"?"Kleine toets":t==="big"?"Grote toets / toets":"Les"}
-function mergedEvents(){return S.events.map(e=>{const m=S.tests.filter(t=>String(t.subject).trim().toLowerCase()===String(e.subject).trim().toLowerCase()&&dayKey(dateTime(t))===dayKey(e.start));if(!m.length)return e;const t=m.find(x=>Math.abs(dateTime(x)-e.start)<7200000)||m[0];return {...e,assessment:t.type,assessmentData:t}})}
+function mergedEvents(){return S.events.map(e=>{const m=S.tests.filter(t=>String(t.subject).trim().toLowerCase()===String(e.subject).trim().toLowerCase()&&dayKey(dateTime(t))===dayKey(e.start));if(!m.length)return e;const t=m.find(x=>Math.abs(dateTime(x)-e.start)<7200000)||m[0];return {...e,assessment:e.assessment||t.type,assessmentData:t}})}
 function combinedForDay(key){const lessons=mergedEvents().filter(e=>dayKey(e.start)===key);const tests=S.tests.filter(t=>dayKey(dateTime(t))===key && !lessons.some(e=>e.assessmentData?.id===t.id));return [...lessons.map(e=>({kind:"lesson",item:e,at:e.start})),...tests.map(t=>({kind:"test",item:t,at:dateTime(t)}))].sort((a,b)=>a.at-b.at)}
 function render(){const base=monday(new Date());base.setDate(base.getDate()+S.week*7);const sun=new Date(base);sun.setDate(base.getDate()+6);$("#week").textContent=(S.week===0?"Deze week · ":"")+`${fmt(base)} – ${fmt(sun)}`;const names=["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];const grid=$("#grid");grid.innerHTML="";let count=0;for(let i=0;i<7;i++){const d=new Date(base);d.setDate(base.getDate()+i);const k=dayKey(d);const items=combinedForDay(k);count+=items.length;const col=document.createElement("div");col.className="day";col.innerHTML=`<div class="day-head ${k===dayKey(new Date())?'today':''}"><strong>${names[i]}</strong><span>${d.getDate()}/${d.getMonth()+1}</span></div>`;if(!items.length)col.insertAdjacentHTML("beforeend","<div class=none>Geen lessen</div>");for(const x of items){const e=x.item;const isT=x.kind==="test";const type=isT?e.type:(e.assessment||"");const c=type==="small"?"small-test":type==="big"?"big-test":"";const b=document.createElement("button");b.className=`lesson ${c}`;b.innerHTML=`<div class="lesson-time">${time(x.at)}${e.end&&!isT?`–${time(e.end)}`:""}</div><strong>${esc(e.subject)}</strong>${isT?`<span class="test-tag">${testTypeLabel(e.type)}</span>`:""}${e.room&&!isT?`<small>${esc(e.room)}</small>`:""}`;b.onclick=()=>isT?openTest(e):openLesson(e);col.appendChild(b)}grid.appendChild(col)}$("#empty").classList.toggle("hidden",count>0||S.events.length>0||S.tests.length>0);renderTests()}
-function openLesson(e){$("#modalBadge").textContent=e.assessment?testTypeLabel(e.assessment):"Les";$("#modalBadge").className=`badge ${e.assessment||""}`;$("#modalTitle").textContent=e.subject;$("#modalDate").textContent=`${new Intl.DateTimeFormat("nl-NL",{dateStyle:"full"}).format(e.start)} · ${time(e.start)} – ${time(e.end)}`;let b=`<div><span>Locatie</span><strong>${esc(e.room||"-")}</strong></div>`;if(e.assessmentData){const t=e.assessmentData;b+=`<div><span>Soort</span><strong>${testTypeLabel(t.type)}</strong></div>${t.weight?`<div><span>Weging</span><strong>${esc(t.weight)}</strong></div>`:""}${t.description?`<div class="desc"><span>Omschrijving</span><strong>${esc(t.description).replace(/\n/g,"<br>")}</strong></div>`:""}`}$("#modalBody").innerHTML=b;$("#modal").classList.remove("hidden")}
+function openLesson(e){
+  const auto=e.assessment&&["small","big"].includes(e.assessment);
+  $("#modalBadge").textContent=e.assessment?testTypeLabel(e.assessment):"Les";
+  $("#modalBadge").className=`badge ${e.assessment||""}`;
+  $("#modalTitle").textContent=e.subject;
+  $("#modalDate").textContent=`${new Intl.DateTimeFormat("nl-NL",{dateStyle:"full"}).format(e.start)} · ${time(e.start)} – ${time(e.end)}`;
+  let b=`<div><span>Locatie</span><strong>${esc(e.room||"-")}</strong></div>`;
+  if(e.teacher) b+=`<div><span>Docent</span><strong>${esc(e.teacher)}</strong></div>`;
+  if(auto) b+=`<div><span>Herkenning</span><strong>Toets gevonden in de roostergegevens</strong></div>`;
+  if(e.assessmentData){const t=e.assessmentData;b+=`<div><span>Soort</span><strong>${testTypeLabel(t.type)}</strong></div>${t.weight?`<div><span>Weging</span><strong>${esc(t.weight)}</strong></div>`:""}${t.description?`<div class="desc"><span>Omschrijving</span><strong>${esc(t.description).replace(/\n/g,"<br>")}</strong></div>`:""}`}
+  if(e.description && e.description.trim()) b+=`<div class="desc"><span>Extra informatie</span><strong>${esc(e.description).replace(/\n/g,"<br>")}</strong></div>`;
+  if(e.categories) b+=`<div><span>Categorie</span><strong>${esc(e.categories)}</strong></div>`;
+  $("#modalBody").innerHTML=b;$("#modal").classList.remove("hidden")
+}
 function openTest(t){openLesson({subject:t.subject,start:dateTime(t),end:t.end?new Date(`${t.date}T${t.end}:00`):dateTime(t),room:"",assessment:t.type,assessmentData:t})}
 function renderTests(){const b=$("#tests");if(!S.tests.length){b.innerHTML='<div class="none wide-none">Nog geen toetsen opgeslagen.</div>';return}b.innerHTML=[...S.tests].sort((a,b)=>dateTime(a)-dateTime(b)).map(t=>`<button class="test-line ${t.type}" data-id="${t.id}"><i></i><span><strong>${esc(t.subject)}</strong><small>${esc(t.date)} · ${esc(t.start)}</small></span><em>${testTypeLabel(t.type)}</em></button>`).join("");b.querySelectorAll(".test-line").forEach(x=>x.onclick=()=>openTest(S.tests.find(t=>t.id===x.dataset.id)))}
 async function save(){await set(dbref(),{email:S.email,calendarUrl:S.url,icsText:S.icsText,tests:S.tests,updatedAt:Date.now()})}
