@@ -100,9 +100,30 @@ function openTest(t){openLesson({subject:t.subject,start:dateTime(t),end:t.end?n
 
 function gradeSubjectLabel(g){
   const vak=g?.vak;
-  if(vak && typeof vak==='object') return String(vak.afkorting||vak.code||vak.naam||'').trim();
-  const raw=String(g?.subject||vak||g?.course||g?.courseName||'').trim();
-  return raw.replace(/\s+[|·]\s+.*$/,'').replace(/\s+-\s+(?:[A-ZÀ-ÿ][^|]{1,40})$/,'').trim();
+  if(vak && typeof vak==='object'){
+    const code=String(vak.afkorting||vak.code||'').trim();
+    if(code) return code;
+    const naam=String(vak.naam||vak.name||'').trim();
+    if(naam) return cleanSubjectName(naam);
+  }
+  const explicitCode=String(g?.vakAfkorting||g?.vakCode||g?.subjectCode||g?.courseCode||'').trim();
+  if(explicitCode) return explicitCode;
+  const raw=String(g?.subject||g?.vak||g?.course||g?.courseName||g?.vakNaam||'').trim();
+  return cleanSubjectName(raw);
+}
+function cleanSubjectName(raw){
+  let s=String(raw||'').trim();
+  if(!s) return '';
+  // Toon in Vakgemiddelden uitsluitend het vak zelf, nooit docent/lokaal/extra tekst.
+  // Ondersteun de meest voorkomende scheidingstekens uit exports/API's.
+  s=s.split(/\s*(?:\||·|—|→)\s*/)[0];
+  s=s.replace(/\s+@\s+.*$/,'');
+  s=s.replace(/\s+\([^)]*(?:docent|leraar|teacher|lokaal|room|kamer)[^)]*\)\s*$/i,'');
+  s=s.replace(/\s+-\s+(?:de\s+)?[A-ZÀ-ÿ][A-Za-zÀ-ÿ.' -]{1,35}$/,'');
+  // Als een code/afkorting vooraan staat (bijv. "LO - Lichamelijke opvoeding"), toon de code.
+  const code=s.match(/^([A-ZÀ-ÖØ-Ý]{1,5})\s*(?:-|:)\s+.+$/);
+  if(code) return code[1];
+  return s.trim();
 }
 function normalizeGrades(list){
   return (Array.isArray(list)?list:Object.values(list||{})).map((g,i)=>({
