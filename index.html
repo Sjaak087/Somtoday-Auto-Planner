@@ -1,121 +1,15 @@
 <!doctype html>
-<html lang="nl">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f4f6f8">
-  <title>SchoolPortaal — Rooster</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f7fa"><title>Mijn Rooster</title><link rel="stylesheet" href="styles.css"></head>
 <body>
-  <div id="authScreen" class="auth-screen somtoday-auth">
-    <div class="som-auth-card">
-      <h1>Inloggen</h1>
-      <div class="school-pill"><span>LVOa</span><button id="clearSchool" type="button" aria-label="School verwijderen">×</button></div>
-      <form id="loginForm" class="auth-form som-form">
-        <input id="email" type="email" autocomplete="username" required placeholder="E-mailadres / gebruikersnaam">
-        <label class="remember-row"><input id="rememberUsername" type="checkbox" checked><span class="checkmark"></span><span>Onthoud mijn gebruikersnaam</span></label>
-        <button class="primary full som-login-button" type="submit">Inloggen</button>
-        <p id="authMessage" class="auth-message" aria-live="polite"></p>
-      </form>
-      <div class="som-auth-help">Je e-mailadres wordt gebruikt als jouw accountnaam om je rooster in Firebase te onthouden.</div>
-    </div>
-  </div>
-
-  <div id="appShell" class="app-shell hidden">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">SP</div>
-        <div><div class="brand-title">SchoolPortaal</div><div class="brand-subtitle">Roosterweergave</div></div>
-      </div>
-      <nav class="nav" aria-label="Hoofdnavigatie">
-        <button class="nav-item active" data-tab="rooster"><span class="icon">▦</span><span>Rooster</span></button>
-        <button class="nav-item" data-tab="instellingen"><span class="icon">⚙</span><span>Instellingen</span></button>
-      </nav>
-      <div class="sidebar-footer">
-        <div class="status-dot"></div>
-        <div><strong id="firebaseLabel">Firebase gekoppeld</strong><small id="firebaseStatus">Controleren…</small></div>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div><div class="breadcrumb">SchoolPortaal / <span id="crumbTitle">Rooster</span></div><h1 id="pageTitle">Rooster</h1></div>
-        <div class="top-actions"><span id="signedInAs" class="user-chip"></span><button class="secondary" id="logoutBtn">Uitloggen</button></div>
-      </header>
-
-      <section class="content">
-        <div id="rooster" class="tab-panel active">
-          <div class="toolbar-card">
-            <div class="toolbar-main">
-              <div class="section-kicker">Somtoday</div>
-              <h2>Mijn rooster</h2>
-              <p class="muted">Gebruik de officiële Somtoday-omgeving om jouw agenda te koppelen. Daarna toont deze pagina de lessen per week.</p>
-            </div>
-            <div class="toolbar-actions">
-              <a class="primary link-button" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open Somtoday ↗</a>
-              <label class="secondary file-button">.ics importeren<input id="icsFile" type="file" accept=".ics,text/calendar"></label>
-            </div>
-          </div>
-
-          <div class="import-card">
-            <div>
-              <strong>Automatisch met jouw Somtoday-agenda</strong>
-              <p>Je iCalendar-link wordt één keer aan jouw account gekoppeld. De link én het laatst opgehaalde rooster worden daarna in Firebase bewaard, zodat je volgende keer automatisch verder kunt.</p>
-            </div>
-            <div class="import-controls">
-              <input id="calendarUrl" type="url" placeholder="Plak hier je Somtoday iCalendar-link">
-              <button class="primary" id="loadCalendar">Rooster laden</button>
-            </div>
-            <details class="help-details">
-              <summary>Waar vind ik de link?</summary>
-              <p>Log in bij Somtoday → Instellingen → Agenda → doorloop de stappen om je agenda te koppelen. Somtoday noemt dit de iCalendar-token/link.</p>
-            </details>
-            <p id="calendarStatus" class="auth-message" aria-live="polite"></p>
-          </div>
-
-          <div class="week-strip" aria-label="Weeknavigatie">
-            <button class="week-arrow" id="prevWeek" aria-label="Vorige week">‹</button>
-            <div class="week-label" id="weekLabel">Deze week</div>
-            <button class="week-arrow" id="nextWeek" aria-label="Volgende week">›</button>
-          </div>
-
-          <div class="roster-legend" aria-label="Legenda toetsmarkering">
-            <div class="legend-item"><span class="legend-dot legend-normal"></span> Les</div>
-            <div class="legend-item"><span class="legend-dot legend-small"></span> Kleine toets</div>
-            <div class="legend-item"><span class="legend-dot legend-big"></span> Toets</div>
-          </div>
-          <div id="scheduleGrid" class="schedule-grid"></div>
-          <div id="emptyState" class="empty-state">
-            <div class="fallback-icon">▦</div>
-            <h3>Nog geen rooster geladen</h3>
-            <p>Plak je Somtoday iCalendar-link hierboven of importeer een .ics-bestand. De gekoppelde link en het rooster worden openbaar per account in Firebase onthouden.</p>
-          </div>
-        </div>
-
-        <div id="instellingen" class="tab-panel">
-          <div class="settings-card">
-            <div class="section-kicker">Configuratie</div><h2>Instellingen</h2>
-            <div class="setting-row"><div><strong>Ingelogd als</strong><small id="settingsEmail">—</small></div><span class="pill pill-green">Actief</span></div>
-            <div class="setting-row"><div><strong>Realtime Database</strong><small id="databaseUrlText">Wordt geladen…</small></div><span class="pill" id="databasePill">Controleren</span></div>
-            <div class="setting-row"><div><strong>Roosterbron</strong><small>Somtoday iCalendar-link of .ics-bestand</small></div><span class="pill pill-green">Klaar</span></div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <div id="lessonModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-backdrop" id="modalBackdrop"></div>
-    <div class="modal-card">
-      <button class="modal-close" id="modalClose" type="button" aria-label="Sluiten">×</button>
-      <div id="modalBadge" class="modal-badge">Les</div>
-      <h2 id="modalTitle">Les</h2>
-      <div class="modal-date" id="modalDate"></div>
-      <div class="modal-details" id="modalDetails"></div>
-    </div>
-  </div>
-
-  <script type="module" src="app.js"></script>
-</body>
-</html>
+<section id="login" class="login-page"><div class="login-card"><div class="logo">Mijn<span>Rooster</span></div><h1>Inloggen</h1><div class="school-chip">LVOa <button id="schoolClear" type="button">×</button></div><form id="loginForm"><input id="email" type="email" placeholder="E-mailadres / gebruikersnaam" autocomplete="username" required><label class="remember"><input id="remember" type="checkbox" checked><span></span>Onthoud mijn gebruikersnaam</label><button class="primary wide">Inloggen</button></form><p class="hint">Je e-mailadres is alleen de sleutel waarmee jouw rooster in Firebase wordt opgeslagen.</p></div></section>
+<div id="app" class="hidden"><aside class="sidebar"><div class="brand"><div class="brand-icon">MR</div><div><strong>Mijn Rooster</strong><small>Somtoday stijl</small></div></div><nav><button class="nav active" data-tab="rooster">▦ <span>Rooster</span></button><button class="nav" data-tab="toetsen">✓ <span>Toetsen</span></button><button class="nav" data-tab="instellingen">⚙ <span>Instellingen</span></button></nav><div class="side-status"><i></i><div><strong>Firebase</strong><small id="dbStatus">Controleren…</small></div></div></aside>
+<main><header><div><p class="crumb">Mijn Rooster / <span id="crumb">Rooster</span></p><h1 id="title">Rooster</h1></div><div class="header-right"><span id="userEmail" class="user"></span><button id="logout" class="ghost">Uitloggen</button></div></header>
+<section id="rooster" class="panel active"><div class="hero"><div><span class="eyebrow">SOMTODAY</span><h2>Mijn rooster</h2><p>Jouw lessen per week, inclusief toetsmarkeringen.</p></div><div class="hero-actions"><a class="primary link" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open Somtoday ↗</a><label class="ghost file">.ics importeren<input id="ics" type="file" accept=".ics,text/calendar"></label><button id="addTest" class="ghost">+ Toets</button></div></div>
+<div class="connection"><div><strong>Somtoday iCalendar</strong><p>De link wordt per account bewaard in de Realtime Database.</p></div><div class="connection-form"><input id="calendarUrl" placeholder="Plak je Somtoday iCalendar-link"><button id="load" class="primary">Rooster laden</button></div><div id="status" class="status"></div></div>
+<div class="weekbar"><button id="prev">‹</button><div id="week">Deze week</div><button id="next">›</button></div><div class="legend"><span><i class="dot normal"></i> Les</span><span><i class="dot small"></i> Kleine toets</span><span><i class="dot big"></i> Grote toets / toets</span></div><div id="grid" class="grid"></div><div id="empty" class="empty">Nog geen rooster geladen. Voeg je iCalendar-link toe of importeer een .ics-bestand.</div></section>
+<section id="toetsen" class="panel"><div class="card"><span class="eyebrow">STUDIEWIJZER</span><h2>Mijn toetsen</h2><p class="muted">Somtoday vermeldt dat toetsen niet in de iCalendar-feed worden meegestuurd. Daarom kun je hier toetsen toevoegen; ze worden per account opgeslagen en kleuren je rooster.</p><div id="tests" class="tests"></div></div></section>
+<section id="instellingen" class="panel"><div class="card"><span class="eyebrow">CONFIGURATIE</span><h2>Instellingen</h2><div class="setting"><div><strong>Account</strong><small id="settingsEmail">—</small></div><span class="pill green">Actief</span></div><div class="setting"><div><strong>Database</strong><small id="databaseUrl">—</small></div><span id="dbPill" class="pill">Controleren</span></div></div></section>
+</main></div>
+<div id="modal" class="modal hidden"><div class="backdrop" id="backdrop"></div><div class="modal-card"><button id="closeModal" class="close">×</button><div id="modalBadge" class="badge">Les</div><h2 id="modalTitle">Les</h2><p id="modalDate" class="modal-date"></p><div id="modalBody" class="modal-body"></div></div></div>
+<div id="testModal" class="modal hidden"><div class="backdrop" id="testBackdrop"></div><div class="modal-card"><button id="closeTest" class="close">×</button><div class="badge small">Toets toevoegen</div><h2>Nieuwe toets</h2><form id="testForm" class="form"><label>Vak<input id="tSubject" required placeholder="Bijv. Wiskunde"></label><div class="two"><label>Datum<input id="tDate" type="date" required></label><label>Start<input id="tStart" type="time" required></label></div><div class="two"><label>Einde<input id="tEnd" type="time"></label><label>Soort<select id="tType"><option value="small">Kleine toets</option><option value="big">Grote toets / toets</option></select></label></div><label>Weging<input id="tWeight" placeholder="Bijv. 2"></label><label>Omschrijving<textarea id="tDescription" rows="4"></textarea></label><div class="form-actions"><button type="button" id="cancelTest" class="ghost">Annuleren</button><button class="primary">Opslaan</button></div></form></div></div>
+<script type="module" src="app.js"></script></body></html>

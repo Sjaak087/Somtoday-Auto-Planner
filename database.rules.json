@@ -1,12 +1,1 @@
-{
-  "rules": {
-    "health": {
-      ".read": true,
-      ".write": false
-    },
-    "accounts": {
-      ".read": true,
-      ".write": true
-    }
-  }
-}
+{"rules":{"accounts":{"$account":{".read":true,".write":true}},"health":{".read":true,".write":true}}}

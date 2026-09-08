@@ -1,332 +1,39 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => [...document.querySelectorAll(s)];
-
-const state = {
-  events: [],
-  weekOffset: 0,
-  accountKey: null,
-  accountEmail: "",
-  restoredFromDatabase: false
-};
-
-const tabTitles = { rooster: "Rooster", instellingen: "Instellingen" };
-
-function activateTab(tab) {
-  $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.tab === tab));
-  $$(".tab-panel").forEach(el => el.classList.toggle("active", el.id === tab));
-  $("#pageTitle").textContent = tabTitles[tab] || "Rooster";
-  $("#crumbTitle").textContent = tabTitles[tab] || "Rooster";
-}
-function setStatus(msg, error = false) {
-  const e = $("#calendarStatus");
-  e.textContent = msg;
-  e.className = `auth-message ${error ? "error" : ""}`;
-}
-
-function makeAccountKey(email) {
-  const normalized = String(email || "").trim().toLowerCase();
-  try {
-    return btoa(unescape(encodeURIComponent(normalized))).replace(/[+/=]/g, "_");
-  } catch {
-    return encodeURIComponent(normalized).replace(/[.#$/\[\]]/g, "_");
-  }
-}
-
-function currentDbRef() {
-  if (!state.accountKey) return null;
-  return ref(db, `accounts/${state.accountKey}`);
-}
-
-async function persistAccount({ calendarUrl, icsText }) {
-  const target = currentDbRef();
-  if (!target) return;
-  const payload = {
-    email: state.accountEmail,
-    calendarUrl: calendarUrl !== undefined && calendarUrl !== null ? calendarUrl : $("#calendarUrl").value.trim(),
-    icsText: icsText ?? "",
-    updatedAt: Date.now()
-  };
-  await set(target, payload);
-}
-
-async function restoreAccount() {
-  const target = currentDbRef();
-  if (!target) return;
-  try {
-    const snapshot = await get(target);
-    if (!snapshot.exists()) {
-      setStatus("Je account is klaar. Voeg je Somtoday iCalendar-link toe.");
-      return;
-    }
-    const data = snapshot.val() || {};
-    if (data.calendarUrl) $("#calendarUrl").value = data.calendarUrl;
-    if (data.icsText) {
-      applyCalendarText(data.icsText, false);
-      state.restoredFromDatabase = true;
-      setStatus("Je opgeslagen rooster is uit Firebase geladen.");
-    } else if (data.calendarUrl) {
-      setStatus("Je opgeslagen Somtoday-link is hersteld. Rooster ophalen…");
-      await loadCalendarUrl(data.calendarUrl, false);
-    }
-  } catch (err) {
-    console.warn("Database restore failed", err);
-    setStatus("Je account kon wel openen, maar het opgeslagen rooster kon niet worden gelezen. Controleer de Firebase Rules.", true);
-  }
-}
-
-async function showApp() {
-  $("#authScreen").classList.add("hidden");
-  $("#appShell").classList.remove("hidden");
-  const email = localStorage.getItem("siteEmail") || "Ingelogd";
-  state.accountEmail = email;
-  state.accountKey = makeAccountKey(email);
-  $("#signedInAs").textContent = email;
-  $("#settingsEmail").textContent = email;
-  activateTab("rooster");
-  await checkFirebase();
-  await restoreAccount();
-  render();
-}
-function showLogin() {
-  $("#appShell").classList.add("hidden");
-  $("#authScreen").classList.remove("hidden");
-}
-
-$("#loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = $("#email").value.trim();
-  if (!email) return;
-  if ($("#rememberUsername").checked) localStorage.setItem("somtodayUsername", email); else localStorage.removeItem("somtodayUsername");
-  localStorage.setItem("siteEmail", email);
-  $("#authMessage").textContent = "";
-  await showApp();
-});
-$("#logoutBtn").addEventListener("click", () => {
-  showLogin();
-  $("#authMessage").textContent = "Uitgelogd. Je opgeslagen rooster blijft in Firebase staan.";
-});
-$("#clearSchool").addEventListener("click", () => $(".school-pill span").textContent = "Kies school");
-const saved = localStorage.getItem("somtodayUsername");
-if (saved) $("#email").value = saved;
-
-function parseIcsDate(raw) {
-  const v = raw.trim();
-  const m = v.match(/^(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?(\d{2})?(Z)?$/);
-  if (!m) return null;
-  const [, Y, Mo, D, h = "00", mi = "00", s = "00", z] = m;
-  if (z) return new Date(Date.UTC(+Y, +Mo - 1, +D, +h, +mi, +s));
-  return new Date(+Y, +Mo - 1, +D, +h, +mi, +s);
-}
-function unfoldIcs(text) { return text.replace(/\r?\n[ \t]/g, ""); }
-function prop(lines, name) {
-  const target = name.toUpperCase();
-  const line = lines.find(x => x.toUpperCase().startsWith(target + ":") || x.toUpperCase().startsWith(target + ";"));
-  return line ? line.slice(line.indexOf(":") + 1) : "";
-}
-function parseDescriptionFields(description) {
-  const fields = {};
-  description.split(/\\n|\n|\r/).map(x => x.trim()).filter(Boolean).forEach(b => {
-    const m = b.match(/^([^:]+):\s*(.*)$/);
-    if (m) fields[m[1].trim().toLowerCase()] = m[2].trim();
-  });
-  return fields;
-}
-function classifyAssessment(summary, description, categories, fields = {}) {
-  const hay = (summary + " " + description + " " + categories + " " + Object.values(fields).join(" ")).toLowerCase();
-  const small = /\b(kleine\s+toets|minitoets|mini[- ]?toets|s\.?o\.?|kt|k\.t\.)\b/.test(hay) || /kleine toets|minitoets|mini[- ]?toets/.test(hay);
-  const big = /\b(toets|proefwerk|tentamen|examen|pw)\b/.test(hay);
-  if (small) return "small";
-  if (big) return "big";
-  return "normal";
-}
-function unescapeIcs(value) {
-  return String(value || "").replace(/\\n/g, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
-}
-function linesToEvent(lines) {
-  const summary = unescapeIcs(prop(lines, "SUMMARY") || "Les");
-  const location = unescapeIcs(prop(lines, "LOCATION") || "");
-  const description = unescapeIcs(prop(lines, "DESCRIPTION") || "");
-  const categories = unescapeIcs(prop(lines, "CATEGORIES") || "");
-  const dtstart = prop(lines, "DTSTART");
-  const dtend = prop(lines, "DTEND");
-  const start = parseIcsDate(dtstart);
-  const end = parseIcsDate(dtend) || (start ? new Date(start.getTime() + 50 * 60000) : null);
-  if (!start) return null;
-  const fields = parseDescriptionFields(description);
-  const subject = unescapeIcs(fields.vak || fields.subject || summary);
-  const teacher = unescapeIcs(fields.docent || fields.teacher || "");
-  let room = location;
-  if (!room) {
-    const rb = Object.entries(fields).find(([k]) => /^(lokaal|room|locatie)$/.test(k));
-    if (rb) room = unescapeIcs(rb[1]);
-  }
-  const assessmentType = classifyAssessment(summary, description, categories, fields);
-  const assessment = assessmentType !== "normal" ? {
-    type: assessmentType,
-    title: unescapeIcs(fields.toets || fields.assessment || summary),
-    description: unescapeIcs(fields.omschrijving || fields.description || description),
-    weight: unescapeIcs(fields.weging || fields.weight || ""),
-    duration: unescapeIcs(fields.duur || fields.duration || "")
-  } : null;
-  return {
-    id: prop(lines, "UID") || crypto.randomUUID(),
-    start, end, subject, teacher, room, assessment, summary, description, categories
-  };
-}
-function parseICS(text) {
-  const lines = unfoldIcs(text).split(/\r?\n/);
-  const events = [];
-  let current = null;
-  for (const line of lines) {
-    if (line.trim().toUpperCase() === "BEGIN:VEVENT") current = [];
-    else if (line.trim().toUpperCase() === "END:VEVENT") {
-      if (current) {
-        const event = linesToEvent(current);
-        if (event) events.push(event);
-      }
-      current = null;
-    } else if (current) current.push(line);
-  }
-  return events;
-}
-function assessmentLabel(type) { return type === "small" ? "Kleine toets" : type === "big" ? "Toets" : "Les"; }
-function assessmentClass(type) { return type === "small" ? "lesson-small-test" : type === "big" ? "lesson-big-test" : ""; }
-
-function mondayFor(date) { const d = new Date(date); d.setHours(12, 0, 0, 0); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return d; }
-function getWeekStart() { const base = mondayFor(new Date()); base.setDate(base.getDate() + state.weekOffset * 7); return base; }
-function formatDate(d) { return new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", timeZone: "Europe/Amsterdam" }).format(d); }
-function updateWeekLabel() {
-  const mon = getWeekStart(); const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  $("#weekLabel").textContent = (state.weekOffset === 0 ? "Deze week · " : "") + formatDate(mon) + " – " + formatDate(sun);
-}
-function dayKey(d) { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Amsterdam", year: "numeric", month: "2-digit", day: "2-digit" }).format(d); }
-function timeLabel(d) { return new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" }).format(d); }
-function render() {
-  updateWeekLabel();
-  const grid = $("#scheduleGrid"), empty = $("#emptyState");
-  grid.innerHTML = "";
-  const monday = getWeekStart();
-  const dayNames = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
-  let any = false;
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday); d.setDate(monday.getDate() + i); const key = dayKey(d);
-    const dayEvents = state.events.filter(ev => dayKey(ev.start) === key).sort((a, b) => a.start - b.start);
-    if (dayEvents.length) any = true;
-    const col = document.createElement("div"); col.className = "day-column";
-    const isToday = dayKey(new Date()) === key;
-    col.innerHTML = `<div class="day-head ${isToday ? "today" : ""}"><div><strong>${dayNames[i]}</strong><span>${new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "numeric" }).format(d)}</span></div>${isToday ? '<em>vandaag</em>' : ""}</div>`;
-    for (const ev of dayEvents) {
-      const card = document.createElement("button"); card.type = "button"; card.className = `lesson-card ${assessmentClass(ev.assessment?.type)}`;
-      const badge = ev.assessment ? `<span class="assessment-badge ${ev.assessment.type}">${assessmentLabel(ev.assessment.type)}</span>` : "";
-      card.innerHTML = `<div class="lesson-top"><div class="lesson-time">${timeLabel(ev.start)}–${timeLabel(ev.end)}</div>${badge}</div><div class="lesson-subject">${escapeHtml(ev.subject)}</div>${ev.room ? `<div class="lesson-meta"><span class="meta-icon">●</span>${escapeHtml(ev.room)}</div>` : ""}${ev.teacher ? `<div class="lesson-meta"><span class="meta-icon">●</span>${escapeHtml(ev.teacher)}</div>` : ""}`;
-      card.addEventListener("click", () => openLessonModal(ev));
-      col.appendChild(card);
-    }
-    if (!dayEvents.length) col.insertAdjacentHTML("beforeend", `<div class="no-lessons">Geen lessen</div>`);
-    grid.appendChild(col);
-  }
-  empty.classList.toggle("hidden", any || state.events.length > 0);
-}
-function openLessonModal(ev) {
-  const modal = $("#lessonModal");
-  $("#modalBadge").textContent = ev.assessment ? assessmentLabel(ev.assessment.type) : "Les";
-  $("#modalBadge").className = `modal-badge ${ev.assessment?.type || "normal"}`;
-  $("#modalTitle").textContent = ev.subject;
-  const date = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" }).format(ev.start);
-  $("#modalDate").textContent = `${date} · ${timeLabel(ev.start)} – ${timeLabel(ev.end)}`;
-  const rows = [];
-  if (ev.room) rows.push(`<div><span>Locatie</span><strong>${escapeHtml(ev.room)}</strong></div>`);
-  if (ev.teacher) rows.push(`<div><span>Docent</span><strong>${escapeHtml(ev.teacher)}</strong></div>`);
-  if (ev.assessment?.weight) rows.push(`<div><span>Weging</span><strong>${escapeHtml(ev.assessment.weight)}</strong></div>`);
-  if (ev.assessment?.duration) rows.push(`<div><span>Duur</span><strong>${escapeHtml(ev.assessment.duration)}</strong></div>`);
-  if (ev.assessment) {
-    const text = ev.assessment.description && ev.assessment.description !== ev.summary ? ev.assessment.description : "Deze afspraak is als toets gemarkeerd in de agenda.";
-    rows.push(`<div class="detail-wide"><span>Toetsinformatie</span><p>${escapeHtml(text)}</p></div>`);
-  } else if (ev.description) {
-    rows.push(`<div class="detail-wide"><span>Notities</span><p>${escapeHtml(ev.description)}</p></div>`);
-  }
-  $("#modalDetails").innerHTML = rows.length ? rows.join("") : `<div class="detail-empty">Geen extra informatie beschikbaar.</div>`;
-  modal.classList.remove("hidden"); document.body.classList.add("modal-open"); $("#modalClose").focus();
-}
-function closeLessonModal() { $("#lessonModal").classList.add("hidden"); document.body.classList.remove("modal-open"); }
-$("#modalClose").addEventListener("click", closeLessonModal);
-$("#modalBackdrop").addEventListener("click", closeLessonModal);
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeLessonModal(); });
-function escapeHtml(v) { return String(v).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
-
-function applyCalendarText(text, persist = true) {
-  const events = parseICS(text);
-  if (!events.length) throw new Error("Geen afspraken gevonden");
-  state.events = events;
-  localStorage.setItem("calendarCache", text);
-  state.weekOffset = 0;
-  render();
-  if (persist) {
-    persistAccount({ icsText: text }).then(() => setStatus(`${events.length} roosterafspraken geladen en opgeslagen in Firebase.`)).catch(err => {
-      console.warn(err);
-      setStatus(`${events.length} roosterafspraken geladen, maar opslaan in Firebase is mislukt. Controleer de Rules.`, true);
-    });
-  }
-}
-
-async function loadViaFirebaseProxy() {
-  return false;
-}
-
-async function loadCalendarUrl(url, persistUrl = true) {
-  const normalizedUrl = url.replace(/^webcal:\/\//i, "https://");
-  if (persistUrl) {
-    try { await persistAccount({ calendarUrl: normalizedUrl }); } catch (err) { console.warn("Calendar URL save failed", err); }
-  }
-  try {
-    const r = await fetch(normalizedUrl, { cache: "no-store", redirect: "follow" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const text = await r.text();
-    applyCalendarText(text, true);
-    return;
-  } catch (err) {
-    console.warn("Direct iCalendar request failed", err);
-    setStatus("Somtoday blokkeert een directe browserrequest. Ik probeer de Firebase-synchronisatie…");
-  }
-
-  setStatus("De link is in Firebase opgeslagen. Somtoday blokkeert het rechtstreeks ophalen vanuit de browser; gebruik hieronder een .ics-import als je huidige browser geen directe toegang toestaat.", true);
-}
-
-$("#icsFile").addEventListener("change", async e => {
-  const f = e.target.files?.[0]; if (!f) return;
-  try {
-    applyCalendarText(await f.text(), true);
-    setStatus(".ics rooster geladen en opgeslagen in Firebase.");
-  } catch (err) {
-    setStatus("Dit .ics-bestand kon niet worden gelezen.", true);
-    console.error(err);
-  }
-});
-$("#loadCalendar").addEventListener("click", async () => {
-  const url = $("#calendarUrl").value.trim();
-  if (!url) return setStatus("Plak eerst je Somtoday iCalendar-link.", true);
-  setStatus("Rooster ophalen…");
-  await loadCalendarUrl(url, true);
-});
-$("#prevWeek").addEventListener("click", () => { state.weekOffset--; render(); });
-$("#nextWeek").addEventListener("click", () => { state.weekOffset++; render(); });
-
-async function checkFirebase() {
-  $("#databaseUrlText").textContent = firebaseConfig.databaseURL;
-  try {
-    await get(ref(db, "health"));
-    $("#firebaseStatus").textContent = "Realtime Database bereikbaar";
-    $("#databasePill").textContent = "Bereikbaar";
-    $("#databasePill").className = "pill pill-green";
-    $(".status-dot").style.background = "#1da66b";
-  } catch {
-    $("#firebaseStatus").textContent = "Rules blokkeren de test of health ontbreekt";
-    $("#databasePill").textContent = "Controleer Rules";
-  }
-}
+const db=getDatabase(initializeApp(firebaseConfig));
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const S={events:[],tests:[],week:0,email:"",key:"",icsText:"",url:""};
+const titles={rooster:"Rooster",toetsen:"Toetsen",instellingen:"Instellingen"};
+const esc=x=>String(x??"").replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+function key(v){return btoa(unescape(encodeURIComponent(String(v).trim().toLowerCase()))).replace(/[+/=]/g,"_")}
+function dbref(){return ref(db,`accounts/${S.key}`)}
+function setStatus(t,err=false){$("#status").textContent=t;$("#status").className=`status ${err?'error':''}`}
+function dayKey(d){return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Amsterdam",year:"numeric",month:"2-digit",day:"2-digit"}).format(d)}
+function time(d){return new Intl.DateTimeFormat("nl-NL",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit"}).format(d)}
+function monday(d){const x=new Date(d);x.setHours(12,0,0,0);const n=x.getDay()||7;x.setDate(x.getDate()-n+1);return x}
+function dateTime(t){return new Date(`${t.date}T${t.start||"00:00"}:00`)}
+function fmt(d){return new Intl.DateTimeFormat("nl-NL",{day:"numeric",month:"short",timeZone:"Europe/Amsterdam"}).format(d)}
+function parseDate(v){const m=String(v||"").match(/^(\d{4})(\d{2})(\d{2})T?(\d{2})?(\d{2})?(\d{2})?(Z)?$/);if(!m)return null;const[,Y,M,D,h="00",mi="00",s="00",z]=m;return z?new Date(Date.UTC(+Y,+M-1,+D,+h,+mi,+s)):new Date(+Y,+M-1,+D,+h,+mi,+s)}
+function unfold(s){return s.replace(/\r?\n[ \t]/g,"")}
+function val(lines,n){const l=lines.find(x=>x.toUpperCase().startsWith(n+":")||x.toUpperCase().startsWith(n+";"));return l?l.slice(l.indexOf(":")+1):""}
+function unesc(v){return String(v||"").replace(/\\n/g,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\")}
+function parseICS(text){const L=unfold(text).split(/\r?\n/),out=[];let cur=null;for(const l of L){if(l.trim()==="BEGIN:VEVENT")cur=[];else if(l.trim()==="END:VEVENT"){if(cur){const st=parseDate(val(cur,"DTSTART"));if(st){const en=parseDate(val(cur,"DTEND"))||new Date(st.getTime()+50*60000);const summary=unesc(val(cur,"SUMMARY")||"Les"),loc=unesc(val(cur,"LOCATION")),desc=unesc(val(cur,"DESCRIPTION"));const subject=unesc((desc.match(/(?:vak|subject)[:=]\s*([^\\n]+)/i)||[])[1]||summary).trim();out.push({id:val(cur,"UID")||crypto.randomUUID(),start:st,end:en,subject,teacher:"",room:loc,summary,description:desc})}}cur=null}else if(cur)cur.push(l)}return out}
+function testTypeLabel(t){return t==="small"?"Kleine toets":t==="big"?"Grote toets / toets":"Les"}
+function mergedEvents(){return S.events.map(e=>{const m=S.tests.filter(t=>String(t.subject).trim().toLowerCase()===String(e.subject).trim().toLowerCase()&&dayKey(dateTime(t))===dayKey(e.start));if(!m.length)return e;const t=m.find(x=>Math.abs(dateTime(x)-e.start)<7200000)||m[0];return {...e,assessment:t.type,assessmentData:t}})}
+function combinedForDay(key){const lessons=mergedEvents().filter(e=>dayKey(e.start)===key);const tests=S.tests.filter(t=>dayKey(dateTime(t))===key && !lessons.some(e=>e.assessmentData?.id===t.id));return [...lessons.map(e=>({kind:"lesson",item:e,at:e.start})),...tests.map(t=>({kind:"test",item:t,at:dateTime(t)}))].sort((a,b)=>a.at-b.at)}
+function render(){const base=monday(new Date());base.setDate(base.getDate()+S.week*7);const sun=new Date(base);sun.setDate(base.getDate()+6);$("#week").textContent=(S.week===0?"Deze week · ":"")+`${fmt(base)} – ${fmt(sun)}`;const names=["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];const grid=$("#grid");grid.innerHTML="";let count=0;for(let i=0;i<7;i++){const d=new Date(base);d.setDate(base.getDate()+i);const k=dayKey(d);const items=combinedForDay(k);count+=items.length;const col=document.createElement("div");col.className="day";col.innerHTML=`<div class="day-head ${k===dayKey(new Date())?'today':''}"><strong>${names[i]}</strong><span>${d.getDate()}/${d.getMonth()+1}</span></div>`;if(!items.length)col.insertAdjacentHTML("beforeend","<div class=none>Geen lessen</div>");for(const x of items){const e=x.item;const isT=x.kind==="test";const type=isT?e.type:(e.assessment||"");const c=type==="small"?"small-test":type==="big"?"big-test":"";const b=document.createElement("button");b.className=`lesson ${c}`;b.innerHTML=`<div class="lesson-time">${time(x.at)}${e.end&&!isT?`–${time(e.end)}`:""}</div><strong>${esc(e.subject)}</strong>${isT?`<span class="test-tag">${testTypeLabel(e.type)}</span>`:""}${e.room&&!isT?`<small>${esc(e.room)}</small>`:""}`;b.onclick=()=>isT?openTest(e):openLesson(e);col.appendChild(b)}grid.appendChild(col)}$("#empty").classList.toggle("hidden",count>0||S.events.length>0||S.tests.length>0);renderTests()}
+function openLesson(e){$("#modalBadge").textContent=e.assessment?testTypeLabel(e.assessment):"Les";$("#modalBadge").className=`badge ${e.assessment||""}`;$("#modalTitle").textContent=e.subject;$("#modalDate").textContent=`${new Intl.DateTimeFormat("nl-NL",{dateStyle:"full"}).format(e.start)} · ${time(e.start)} – ${time(e.end)}`;let b=`<div><span>Locatie</span><strong>${esc(e.room||"-")}</strong></div>`;if(e.assessmentData){const t=e.assessmentData;b+=`<div><span>Soort</span><strong>${testTypeLabel(t.type)}</strong></div>${t.weight?`<div><span>Weging</span><strong>${esc(t.weight)}</strong></div>`:""}${t.description?`<div class="desc"><span>Omschrijving</span><strong>${esc(t.description).replace(/\n/g,"<br>")}</strong></div>`:""}`}$("#modalBody").innerHTML=b;$("#modal").classList.remove("hidden")}
+function openTest(t){openLesson({subject:t.subject,start:dateTime(t),end:t.end?new Date(`${t.date}T${t.end}:00`):dateTime(t),room:"",assessment:t.type,assessmentData:t})}
+function renderTests(){const b=$("#tests");if(!S.tests.length){b.innerHTML='<div class="none wide-none">Nog geen toetsen opgeslagen.</div>';return}b.innerHTML=[...S.tests].sort((a,b)=>dateTime(a)-dateTime(b)).map(t=>`<button class="test-line ${t.type}" data-id="${t.id}"><i></i><span><strong>${esc(t.subject)}</strong><small>${esc(t.date)} · ${esc(t.start)}</small></span><em>${testTypeLabel(t.type)}</em></button>`).join("");b.querySelectorAll(".test-line").forEach(x=>x.onclick=()=>openTest(S.tests.find(t=>t.id===x.dataset.id)))}
+async function save(){await set(dbref(),{email:S.email,calendarUrl:S.url,icsText:S.icsText,tests:S.tests,updatedAt:Date.now()})}
+async function restore(){try{const s=await get(dbref());if(!s.exists()){setStatus("Je account is aangemaakt. Voeg je iCalendar-link toe.");return}const d=s.val()||{};S.url=d.calendarUrl||"";S.icsText=d.icsText||"";S.tests=Array.isArray(d.tests)?d.tests:Object.values(d.tests||{});$("#calendarUrl").value=S.url;if(S.icsText){S.events=parseICS(S.icsText);setStatus(`${S.events.length} lessen en ${S.tests.length} toetsen geladen.`)}else setStatus(`${S.tests.length} opgeslagen toetsen geladen.`);render()}catch(e){setStatus("Firebase kon het account niet laden. Controleer de openbare Rules.",true)}}
+async function loadICS(text){S.icsText=text;S.events=parseICS(text);if(!S.events.length)throw Error("Geen lessen gevonden");await save();setStatus(`${S.events.length} lessen geladen en opgeslagen in Firebase.`);S.week=0;render()}
+async function loadUrl(){let u=$("#calendarUrl").value.trim();if(!u)return setStatus("Plak eerst je Somtoday iCalendar-link.",true);u=u.replace(/^webcal:\/\//i,"https://");S.url=u;setStatus("Rooster ophalen…");try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`HTTP ${r.status}`);await loadICS(await r.text())}catch(e){await save().catch(()=>{});setStatus("Somtoday blokkeert het directe ophalen vanuit de browser (CORS). Gebruik daarom '.ics importeren' om je rooster hier te laden. Je link blijft wel per account bewaard.",true)}}
+function openTab(t){$$('.nav').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===t));$("#title").textContent=titles[t];$("#crumb").textContent=titles[t]}
+$("#loginForm").onsubmit=async e=>{e.preventDefault();S.email=$("#email").value.trim();if($("#remember").checked)localStorage.setItem("rosterEmail",S.email);else localStorage.removeItem("rosterEmail");localStorage.setItem("currentEmail",S.email);S.key=key(S.email);$("#login").classList.add('hidden');$("#app").classList.remove('hidden');$("#userEmail").textContent=S.email;$("#settingsEmail").textContent=S.email;await restore();try{await get(ref(db,'health'));$("#dbStatus").textContent='Bereikbaar';$(".side-status i").classList.add('ok');$("#dbPill").textContent='Bereikbaar';$("#dbPill").classList.add('green')}catch{}};
+$("#logout").onclick=()=>{location.reload()};$("#schoolClear").onclick=()=>{};const saved=localStorage.getItem('rosterEmail');if(saved)$("#email").value=saved;
+$$('.nav').forEach(b=>b.onclick=()=>openTab(b.dataset.tab));$("#prev").onclick=()=>{S.week--;render()};$("#next").onclick=()=>{S.week++;render()};$("#load").onclick=loadUrl;$("#ics").onchange=async e=>{const f=e.target.files?.[0];if(f)try{await loadICS(await f.text())}catch(err){setStatus(err.message,true)}};
+function showTest(){ $("#testModal").classList.remove('hidden');$("#tDate").valueAsDate=new Date();$("#tStart").value='08:00'}$("#addTest").onclick=showTest;function closeTest(){$("#testModal").classList.add('hidden')}$("#closeTest").onclick=closeTest;$("#cancelTest").onclick=closeTest;$("#testBackdrop").onclick=closeTest;
+$("#testForm").onsubmit=async e=>{e.preventDefault();const t={id:crypto.randomUUID(),subject:$("#tSubject").value.trim(),date:$("#tDate").value,start:$("#tStart").value,end:$("#tEnd").value,type:$("#tType").value,weight:$("#tWeight").value.trim(),description:$("#tDescription").value.trim()};S.tests.push(t);try{await save();render();closeTest();setStatus('Toets opgeslagen in Firebase.')}catch{S.tests.pop();setStatus('Toets opslaan is mislukt.',true)}};
+$("#closeModal").onclick=()=>$("#modal").classList.add('hidden');$("#backdrop").onclick=()=>$("#modal").classList.add('hidden');document.addEventListener('keydown',e=>{if(e.key==='Escape'){$("#modal").classList.add('hidden');$("#testModal").classList.add('hidden')}});$("#databaseUrl").textContent=firebaseConfig.databaseURL;
