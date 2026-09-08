@@ -90,7 +90,11 @@ function openLesson(e){
   if(e.description && e.description.trim()) b+=`<div class="desc"><span>Extra informatie</span><strong>${esc(e.description).replace(/\n/g,"<br>")}</strong></div>`;
   if(e.categories) b+=`<div><span>Categorie</span><strong>${esc(e.categories)}</strong></div>`;
   if(e.assessmentSource) b+=`<div class="desc"><span>Toetskenmerk</span><strong>${esc(e.assessmentSource).replace(/\n/g,"<br>")}</strong></div>`;
-  $("#modalBody").innerHTML=b;$("#modal").classList.remove("hidden")
+  $("#modalBody").innerHTML=b;
+  const action=$("#lessonActions");
+  action.classList.toggle("hidden", !!e.assessmentData);
+  $("#addTestForLesson").onclick=()=>{ $("#modal").classList.add("hidden"); showTest(e); };
+  $("#modal").classList.remove("hidden");
 }
 function openTest(t){openLesson({subject:t.subject,start:dateTime(t),end:t.end?new Date(`${t.date}T${t.end}:00`):dateTime(t),room:"",assessment:t.type,assessmentData:t})}
 function renderTests(){const b=$("#tests");if(!S.tests.length){b.innerHTML='<div class="none wide-none">Nog geen toetsen opgeslagen.</div>';return}b.innerHTML=[...S.tests].sort((a,b)=>dateTime(a)-dateTime(b)).map(t=>`<button class="test-line ${t.type}" data-id="${t.id}"><i></i><span><strong>${esc(t.subject)}</strong><small>${esc(t.date)} · ${esc(t.start)}</small></span><em>${testTypeLabel(t.type)}</em></button>`).join("");b.querySelectorAll(".test-line").forEach(x=>x.onclick=()=>openTest(S.tests.find(t=>t.id===x.dataset.id)))}
@@ -102,6 +106,16 @@ function openTab(t){$$('.nav').forEach(b=>b.classList.toggle('active',b.dataset.
 $("#loginForm").onsubmit=async e=>{e.preventDefault();S.email=$("#email").value.trim();if($("#remember").checked)localStorage.setItem("rosterEmail",S.email);else localStorage.removeItem("rosterEmail");localStorage.setItem("currentEmail",S.email);S.key=key(S.email);$("#login").classList.add('hidden');$("#app").classList.remove('hidden');$("#userEmail").textContent=S.email;$("#settingsEmail").textContent=S.email;await restore();try{await get(ref(db,'health'));$("#dbStatus").textContent='Bereikbaar';$(".side-status i").classList.add('ok');$("#dbPill").textContent='Bereikbaar';$("#dbPill").classList.add('green')}catch{}};
 $("#logout").onclick=()=>{location.reload()};$("#schoolClear").onclick=()=>{};const saved=localStorage.getItem('rosterEmail');if(saved)$("#email").value=saved;
 $$('.nav').forEach(b=>b.onclick=()=>openTab(b.dataset.tab));$("#prev").onclick=()=>{S.week--;render()};$("#next").onclick=()=>{S.week++;render()};$("#load").onclick=loadUrl;$("#ics").onchange=async e=>{const f=e.target.files?.[0];if(f)try{await loadICS(await f.text())}catch(err){setStatus(err.message,true)}};
-function showTest(){ $("#testModal").classList.remove('hidden');$("#tDate").valueAsDate=new Date();$("#tStart").value='08:00'}$("#addTest").onclick=showTest;function closeTest(){$("#testModal").classList.add('hidden')}$("#closeTest").onclick=closeTest;$("#cancelTest").onclick=closeTest;$("#testBackdrop").onclick=closeTest;
+function showTest(lesson=null){
+  $("#testModal").classList.remove("hidden");
+  $("#testForm").reset();
+  $("#tDate").value=lesson?dayKey(lesson.start):dayKey(new Date());
+  $("#tStart").value=lesson?new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit",hour12:false}).format(lesson.start):"08:00";
+  $("#tSubject").value=lesson?.subject||"";
+  $("#tDescription").value=lesson?.description||"";
+  $("#tWeight").value="";
+  $("#tType").value="small";
+}
+$("#addTest").onclick=showTest;function closeTest(){$("#testModal").classList.add('hidden')}$("#closeTest").onclick=closeTest;$("#cancelTest").onclick=closeTest;$("#testBackdrop").onclick=closeTest;
 $("#testForm").onsubmit=async e=>{e.preventDefault();const t={id:crypto.randomUUID(),subject:$("#tSubject").value.trim(),date:$("#tDate").value,start:$("#tStart").value,end:$("#tEnd").value,type:$("#tType").value,weight:$("#tWeight").value.trim(),description:$("#tDescription").value.trim()};S.tests.push(t);try{await save();render();closeTest();setStatus('Toets opgeslagen in Firebase.')}catch{S.tests.pop();setStatus('Toets opslaan is mislukt.',true)}};
 $("#closeModal").onclick=()=>$("#modal").classList.add('hidden');$("#backdrop").onclick=()=>$("#modal").classList.add('hidden');document.addEventListener('keydown',e=>{if(e.key==='Escape'){$("#modal").classList.add('hidden');$("#testModal").classList.add('hidden')}});$("#databaseUrl").textContent=firebaseConfig.databaseURL;
