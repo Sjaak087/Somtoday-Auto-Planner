@@ -1,10 +1,12 @@
-# Mijn Rooster — GitHub Pages
+# Mijn Rooster
 
-Alle bestanden staan rechtstreeks in de hoofdmap van deze ZIP.
+GitHub Pages-klare roosterpagina in Somtoday-achtige stijl.
 
-## Automatische toetsherkenning
-De site controleert per roosterafspraak de `SUMMARY`, `DESCRIPTION`, `CATEGORIES` en `ATTACH`-velden en neemt ook het gevonden vak mee in de beoordeling. Zo kan een toets die als extra informatie aan een vak/roosterafspraak is gekoppeld automatisch worden herkend.
+## Toetsherkenning
+De site kijkt **niet naar de naam van het vak of de les**. Voor de oranje/rode toetsmarkering wordt alleen de extra metadata van een iCalendar-afspraak gebruikt, zoals `DESCRIPTION`, `CATEGORIES`, `ATTACH` en `X-*` velden.
 
-Kleine toets-signalen zijn onder andere `kleine toets`, `minitoets`, `overhoring`, `quiz` en `formatieve toets`. Grote toets-signalen zijn onder andere `toets`, `proefwerk`, `tentamen`, `examen`, `repetitie`, `schoolexamen` en `PTA`.
+- kleine toets: oranje
+- grote toets / toets: rood
+- klikken op een les/toets opent de details
 
-Kleine toetsen worden oranje en grote toetsen/toetsen rood. Klik op het vak om de gevonden informatie te bekijken.
+Een losse `Toets`-markering in de extra metadata wordt als kleine toets behandeld, passend bij het oranje toets-icoon uit Somtoday. Een expliciete grote-toetsmarkering heeft voorrang.

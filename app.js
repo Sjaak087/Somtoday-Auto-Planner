@@ -18,15 +18,35 @@ function parseDate(v){const m=String(v||"").match(/^(\d{4})(\d{2})(\d{2})T?(\d{2
 function unfold(s){return s.replace(/\r?\n[ \t]/g,"")}
 function val(lines,n){const l=lines.find(x=>x.toUpperCase().startsWith(n+":")||x.toUpperCase().startsWith(n+";"));return l?l.slice(l.indexOf(":")+1):""}
 function unesc(v){return String(v||"").replace(/\\n/g,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\")}
-function detectAssessment(summary, description, categories, attachment, subject){
-  const text=[summary,description,categories,attachment,subject].filter(Boolean).join(" ").toLowerCase();
+function detectAssessment(metaText){
+  // Somtoday zet de toets-indicator niet in de lesnaam. We zoeken daarom alleen
+  // in de extra event-metadata (DESCRIPTION/CATEGORIES/X-* / ATTACH enz.).
+  const text=String(metaText||"").toLowerCase();
   const normalized=text.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-  const small=["kleine toets","minitoets","mini toets","mini-toets","overhoring","formatieve toets","kleine s.o.","quiz","k.t.","kt "];
-  const big=["grote toets","toets","proefwerk","tentamen","examen","repetitie","summatieve toets","schoolexamen","pta","s.o."];
-  const clean=(x)=>x.trim();
-  if(small.some(x=>normalized.includes(clean(x)))) return "small";
-  if(big.some(x=>normalized.includes(clean(x)))) return "big";
+  const small=[
+    "kleine toets","kleine toets", "minitoets","mini toets","mini-toets",
+    "kleine so","kleine s.o.","kleine s.o","overhoring","formatieve toets",
+    "k.t.","kt","minor test","small test","oranje","orange","small"
+  ];
+  const big=[
+    "grote toets","grote toets", "grote so","grote s.o.","proefwerk",
+    "tentamen","examen","repetitie","summatieve toets","schoolexamen",
+    "pta","major test","big test","rood","red","large","big"
+  ];
+  if(big.some(x=>normalized.includes(x))) return "big";
+  if(small.some(x=>normalized.includes(x))) return "small";
+  // In sommige Somtoday-feeds staat het aparte toetslabel alleen als "Toets"
+  // in de omschrijving/metadata. Dat is geen lesnaam en wordt daarom als
+  // kleine toets weergegeven, zoals het oranje toets-symbool in Somtoday.
+  if(/(^|[^a-z])toets(\s|$|[-_:])/i.test(normalized)) return "small";
   return "";
+}
+function extraMetadata(lines){
+  const ignored=["SUMMARY","DTSTART","DTEND","UID","LOCATION","ORGANIZER"];
+  return lines.filter(line=>{
+    const prop=line.split(":",1)[0].split(";",1)[0].toUpperCase();
+    return !ignored.includes(prop);
+  }).map(line=>unesc(line.slice(line.indexOf(":")+1))).filter(Boolean).join(" ");
 }
 function parseICS(text){
   const L=unfold(text).split(/\r?\n/),out=[];let cur=null;
@@ -43,8 +63,9 @@ function parseICS(text){
           const cats=unesc(val(cur,"CATEGORIES"));
           const attach=unesc(val(cur,"ATTACH"));
           const subject=unesc((desc.match(/(?:vak|subject|course|class)[:=]\s*([^\n]+)/i)||[])[1]||summary).trim();
-          const assessment=detectAssessment(summary,desc,cats,attach,subject);
-          out.push({id:val(cur,"UID")||crypto.randomUUID(),start:st,end:en,subject,teacher:unesc(val(cur,"ORGANIZER")||""),room:loc,summary,description:desc,categories:cats,attachment:attach,assessment});
+          const metadata=extraMetadata(cur);
+          const assessment=detectAssessment(metadata);
+          out.push({id:val(cur,"UID")||crypto.randomUUID(),start:st,end:en,subject,teacher:unesc(val(cur,"ORGANIZER")||""),room:loc,summary,description:desc,categories:cats,attachment:attach,metadata,assessment,assessmentSource:assessment?metadata:""});
         }
       }
       cur=null;
@@ -68,6 +89,7 @@ function openLesson(e){
   if(e.assessmentData){const t=e.assessmentData;b+=`<div><span>Soort</span><strong>${testTypeLabel(t.type)}</strong></div>${t.weight?`<div><span>Weging</span><strong>${esc(t.weight)}</strong></div>`:""}${t.description?`<div class="desc"><span>Omschrijving</span><strong>${esc(t.description).replace(/\n/g,"<br>")}</strong></div>`:""}`}
   if(e.description && e.description.trim()) b+=`<div class="desc"><span>Extra informatie</span><strong>${esc(e.description).replace(/\n/g,"<br>")}</strong></div>`;
   if(e.categories) b+=`<div><span>Categorie</span><strong>${esc(e.categories)}</strong></div>`;
+  if(e.assessmentSource) b+=`<div class="desc"><span>Toetskenmerk</span><strong>${esc(e.assessmentSource).replace(/\n/g,"<br>")}</strong></div>`;
   $("#modalBody").innerHTML=b;$("#modal").classList.remove("hidden")
 }
 function openTest(t){openLesson({subject:t.subject,start:dateTime(t),end:t.end?new Date(`${t.date}T${t.end}:00`):dateTime(t),room:"",assessment:t.type,assessmentData:t})}
