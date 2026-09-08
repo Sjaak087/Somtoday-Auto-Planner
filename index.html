@@ -8,7 +8,31 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-shell">
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="brand-mark large">SP</div>
+      <span class="eyebrow">Persoonlijke schoolomgeving</span>
+      <h1>Inloggen</h1>
+      <p class="muted">Log eerst in op SchoolPortaal. Daarna kun je via de officiële Somtoday-login naar je rooster.</p>
+
+      <form id="loginForm" class="auth-form">
+        <label for="email">E-mailadres</label>
+        <input id="email" type="email" autocomplete="email" required placeholder="jij@example.nl">
+        <label for="password">Wachtwoord</label>
+        <input id="password" type="password" autocomplete="current-password" required placeholder="••••••••">
+        <button class="primary full" type="submit">Inloggen</button>
+        <button class="secondary full" id="registerBtn" type="button">Account maken</button>
+        <p id="authMessage" class="auth-message" aria-live="polite"></p>
+      </form>
+
+      <div class="auth-note">
+        <strong>Somtoday-login</strong>
+        <span>Je Somtoday-wachtwoord wordt niet door deze website opgeslagen. De officiële Somtoday-site verzorgt die login.</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="appShell" class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">SP</div>
@@ -17,13 +41,11 @@
           <div class="brand-subtitle">Somtoday koppeling</div>
         </div>
       </div>
-
       <nav class="nav" aria-label="Hoofdnavigatie">
         <button class="nav-item" data-tab="home"><span class="icon">⌂</span><span>Overzicht</span></button>
         <button class="nav-item active" data-tab="rooster"><span class="icon">▦</span><span>Rooster</span></button>
         <button class="nav-item" data-tab="instellingen"><span class="icon">⚙</span><span>Instellingen</span></button>
       </nav>
-
       <div class="sidebar-footer">
         <div class="status-dot"></div>
         <div>
@@ -36,10 +58,13 @@
     <main class="main">
       <header class="topbar">
         <div>
-          <div class="breadcrumb">SchoolPortaal / Rooster</div>
+          <div class="breadcrumb">SchoolPortaal / <span id="crumbTitle">Rooster</span></div>
           <h1 id="pageTitle">Rooster</h1>
         </div>
-        <a class="somtoday-link" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open Somtoday ↗</a>
+        <div class="top-actions">
+          <span id="signedInAs" class="user-chip"></span>
+          <button class="secondary" id="logoutBtn">Uitloggen</button>
+        </div>
       </header>
 
       <section class="content">
@@ -48,12 +73,10 @@
             <div>
               <span class="eyebrow">Jouw schoolomgeving</span>
               <h2>Alles op één plek</h2>
-              <p>Deze GitHub Pages-site is voorbereid op Somtoday en je Firebase Realtime Database.</p>
+              <p>Je bent ingelogd. Open daarna Somtoday via de officiële login en bekijk je rooster.</p>
               <button class="primary" data-go="rooster">Naar mijn rooster</button>
             </div>
-            <div class="hero-graphic" aria-hidden="true">
-              <div class="graphic-window"><div></div><div></div><div></div></div>
-            </div>
+            <div class="hero-graphic" aria-hidden="true"><div class="graphic-window"><div></div><div></div><div></div></div></div>
           </div>
         </div>
 
@@ -62,11 +85,12 @@
             <div class="toolbar-main">
               <div class="section-kicker">Somtoday</div>
               <h2>Rooster</h2>
-              <p class="muted">Je Somtoday-rooster wordt hieronder geladen. Je bestaande Somtoday-inlog blijft actief in je browser.</p>
+              <p class="muted">Log in via Somtoday. Daarna proberen we de officiële roosterpagina hieronder te tonen.</p>
             </div>
             <div class="toolbar-actions">
+              <a class="primary link-button" id="somtodayLogin" href="https://inloggen.somtoday.nl/" target="_blank" rel="noopener">Inloggen bij Somtoday ↗</a>
+              <button class="secondary" id="showRoster">Rooster tonen</button>
               <button class="secondary" id="reloadFrame">Vernieuwen</button>
-              <a class="primary link-button" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open volledig</a>
             </div>
           </div>
 
@@ -76,31 +100,28 @@
             <button class="week-arrow" id="nextWeek" aria-label="Volgende week">›</button>
           </div>
 
+          <div class="login-helper">
+            <div>
+              <strong>Stap 1:</strong> klik <em>Inloggen bij Somtoday</em> en log in op Somtoday.
+              <br><strong>Stap 2:</strong> kom terug en klik <em>Rooster tonen</em>.
+            </div>
+            <a href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open rooster in Somtoday ↗</a>
+          </div>
+
           <div class="embed-shell">
             <div class="embed-head">
               <div class="embed-brand"><span class="mini-dot"></span> Somtoday leerling</div>
-              <span class="embed-hint">Ingebouwde weergave</span>
+              <span class="embed-hint" id="embedHint">Nog niet geopend</span>
             </div>
-            <div class="iframe-wrap">
-              <iframe id="somtodayFrame" title="Somtoday rooster" src="https://leerling.somtoday.nl/rooster" loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-              <div class="iframe-fallback" id="iframeFallback">
+            <div class="iframe-wrap" id="iframeWrap">
+              <div class="iframe-placeholder" id="iframePlaceholder">
                 <div class="fallback-icon">↗</div>
-                <h3>Somtoday staat directe inbedding mogelijk niet toe</h3>
-                <p>Dat wordt bepaald door de beveiligingsheaders van Somtoday. Open Somtoday volledig om je rooster te bekijken.</p>
-                <a class="primary link-button" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open Somtoday</a>
+                <h3>Log eerst in bij Somtoday</h3>
+                <p>Open de officiële Somtoday-login. De website vraagt nooit om je Somtoday-wachtwoord.</p>
+                <a class="primary link-button" href="https://inloggen.somtoday.nl/" target="_blank" rel="noopener">Somtoday openen</a>
               </div>
+              <iframe id="somtodayFrame" title="Somtoday rooster" src="about:blank" loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
             </div>
-          </div>
-
-          <div class="info-grid">
-            <article class="info-card">
-              <span class="info-label">Somtoday URL</span>
-              <code>leerling.somtoday.nl/rooster</code>
-            </article>
-            <article class="info-card">
-              <span class="info-label">Firebase</span>
-              <code>somtoday-auto-planner</code>
-            </article>
           </div>
         </div>
 
@@ -108,13 +129,17 @@
           <div class="settings-card">
             <div class="section-kicker">Configuratie</div>
             <h2>Instellingen</h2>
-            <p class="muted">Firebase staat in een los bestand zodat je de configuratie makkelijk kunt aanpassen zonder de rest van de site te wijzigen.</p>
+            <p class="muted">Firebase staat in een los bestand. De login van deze website gebruikt Firebase Authentication.</p>
+            <div class="setting-row">
+              <div><strong>Ingelogd als</strong><small id="settingsEmail">—</small></div>
+              <span class="pill pill-green">Actief</span>
+            </div>
             <div class="setting-row">
               <div><strong>Realtime Database</strong><small id="databaseUrlText">Wordt geladen…</small></div>
               <span class="pill" id="databasePill">Controleren</span>
             </div>
             <div class="setting-row">
-              <div><strong>Somtoday rooster</strong><small>https://leerling.somtoday.nl/rooster</small></div>
+              <div><strong>Somtoday</strong><small>Officiële login: inloggen.somtoday.nl</small></div>
               <span class="pill pill-green">Klaar</span>
             </div>
           </div>

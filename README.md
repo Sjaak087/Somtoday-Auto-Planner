@@ -1,40 +1,26 @@
 # SchoolPortaal — Somtoday + Firebase
 
-Een GitHub Pages-klare site met:
+GitHub Pages-klare website met een verplichte Firebase-login en een Somtoday-roosterpagina.
 
-- een tab **Rooster** met een ingebedde Somtoday-leerlingomgeving;
-- een aparte `firebase-config.js` voor de Firebase configuratie;
-- een eenvoudige weekbalk in de nieuwe site;
-- een instellingenpagina met Firebase-status;
-- responsive ontwerp voor desktop en mobiel.
+## Wat doet de site?
 
-## Bestanden
+1. Je moet eerst inloggen met Firebase Authentication (e-mail + wachtwoord).
+2. Daarna verschijnt de site en het tabblad **Rooster**.
+3. Via **Inloggen bij Somtoday** wordt de officiële Somtoday-login geopend.
+4. Na je Somtoday-login kun je **Rooster tonen** proberen; de site laadt dan `https://leerling.somtoday.nl/rooster`.
 
-- `index.html` — pagina en tabs
-- `styles.css` — vormgeving
-- `app.js` — navigatie, Somtoday iframe en Firebase-check
-- `firebase-config.js` — losse Firebase-config
+## Belangrijk over Somtoday-login
+
+De website neemt je Somtoday-wachtwoord niet over en probeert geen wachtwoorden of sessiecookies te onderscheppen. Somtoday beheert de eigen login.
+
+Een GitHub Pages-site kan bovendien niet garanderen dat de ingelogde Somtoday-pagina in een iframe wordt weergegeven. Dat hangt af van Somtoday-beveiligingsheaders en browser privacy/third-party cookiebeleid. Als inbedding wordt geblokkeerd, gebruik **Open rooster in Somtoday** voor de officiële pagina.
+
+## Firebase instellen
+
+Zet in Firebase Console bij **Authentication → Sign-in method** de provider **Email/Password** aan.
+
+Controleer daarna bij **Realtime Database → Rules** dat alleen geauthenticeerde gebruikers toegang krijgen tot de nodes die de site moet lezen. Gebruik geen openbare `read: true` / `write: true` regels voor persoonlijke gegevens.
 
 ## GitHub Pages
 
-1. Maak een nieuwe GitHub repository.
-2. Upload alle bestanden uit deze map naar de repository-root.
-3. Ga naar **Settings → Pages**.
-4. Kies **Deploy from a branch**, daarna `main` en `/ (root)`.
-5. Open de gegenereerde GitHub Pages-URL.
-
-## Belangrijke Somtoday-opmerking
-
-De site gebruikt exact de door jou gegeven leerling-URL in een `iframe`. Of Somtoday ook werkelijk in een iframe zichtbaar wordt, wordt bepaald door de beveiligingsheaders van Somtoday en door de browser. Als Somtoday framing blokkeert, werkt de knop **Open volledig** wel en opent de officiële omgeving in een apart tabblad.
-
-Een frontend op GitHub Pages kan niet zomaar de inhoud van een ingelogde Somtoday-pagina uitlezen via JavaScript door browserbeveiliging (same-origin/CORS). Daarom wordt de Somtoday-pagina zelf ingeladen in plaats van login-cookies of wachtwoorden te kopiëren.
-
-## Firebase
-
-De Firebase web-config staat in `firebase-config.js`. Firebase-configwaarden zoals `apiKey`, `projectId` en `appId` zijn project/app-identifiers; bescherming van je database hoort via Firebase Security Rules en eventueel App Check/Auth te gebeuren.
-
-De huidige app doet alleen een `health` read om te controleren of de database bereikbaar is. Je kunt daarna je eigen data-structuur toevoegen zonder `index.html` te wijzigen.
-
-### Voorbeeldregels
-
-Gebruik niet zomaar openbare read/write-regels voor een echte persoonlijke database. Kies regels passend bij je authenticatie en datamodel.
+Upload alle bestanden naar de repository-root en activeer **Settings → Pages → Deploy from a branch → main → /(root)**.
