@@ -149,3 +149,99 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monos
 .remember-row input:checked + .checkmark::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #0a5aa6; border-width: 0 3px 3px 0; transform: rotate(45deg); }
 .som-login-button { width: 228px; height: 54px; justify-self: center; border-radius: 14px; background: #005baa; font-size: 18px; margin-top: 4px; }
 .som-auth-help { margin-top: 18px; padding: 13px 15px; border-radius: 12px; background: #f5f7f9; color: #667482; font-size: 12px; line-height: 1.55; }
+
+
+/* ===== Somtoday-inspired visual refresh ===== */
+:root{
+  --som-blue:#005aa9;
+  --som-blue-dark:#123f67;
+  --som-blue-light:#eaf4ff;
+  --som-yellow:#ffbd22;
+  --som-yellow-soft:#fff5d8;
+  --som-bg:#f2f5f8;
+  --som-line:#d5e0ea;
+  --som-text:#173f63;
+  --som-muted:#718399;
+  --som-shadow:0 10px 30px rgba(18,63,103,.10);
+}
+body{background:var(--som-bg);color:var(--som-text)}
+.app-shell{grid-template-columns:220px 1fr}
+.sidebar{background:var(--som-blue-dark);padding:16px 12px 14px;box-shadow:8px 0 28px rgba(10,42,69,.08)}
+.brand{padding:8px 12px 26px}
+.brand-mark{background:var(--som-yellow);color:var(--som-blue-dark);width:40px;height:40px;border-radius:12px;font-weight:1000}
+.brand-title{font-size:15px;color:#fff}
+.brand-subtitle{color:#bfd3e5}
+.nav{gap:7px;margin-top:4px}
+.nav-item{color:#c6d5e3;border-radius:12px;padding:13px 14px;font-weight:700}
+.nav-item:hover{background:rgba(255,255,255,.08)}
+.nav-item.active{background:var(--som-yellow);color:var(--som-blue-dark);box-shadow:0 5px 14px rgba(0,0,0,.08)}
+.sidebar-footer{border-color:rgba(255,255,255,.13);padding:16px 10px 2px}
+.sidebar-footer strong{color:#fff}
+.sidebar-footer small{color:#b8c9d8}
+.status-dot{background:var(--som-yellow)!important}
+.topbar{height:90px;background:#fff;border-bottom:1px solid var(--som-line);padding:18px 30px;box-shadow:0 2px 16px rgba(15,52,82,.04)}
+.breadcrumb{color:#8a9aab}
+h1{color:var(--som-blue-dark);font-size:26px}
+.content{padding:24px 30px 40px;max-width:1480px}
+.toolbar-card,.import-card,.settings-card,.week-label,.week-arrow,.info-card{border-color:var(--som-line);box-shadow:var(--som-shadow)}
+.toolbar-card{border-radius:20px;padding:24px 26px;background:#fff}
+.section-kicker{color:var(--som-blue);letter-spacing:1.5px}
+h2{color:var(--som-blue-dark)}
+.primary{background:var(--som-blue);border-radius:12px;box-shadow:0 6px 16px rgba(0,90,169,.16)}
+.primary:hover{background:#004d91}
+.secondary{border-color:var(--som-line);color:var(--som-blue-dark);background:#fff}
+.import-card{margin-top:14px;border:1px solid var(--som-line);border-radius:18px;background:#fff;padding:18px 20px;display:grid;gap:13px}
+.import-card strong{color:var(--som-blue-dark)}
+.import-controls{display:grid;grid-template-columns:1fr auto;gap:10px}
+.import-controls input{height:44px;border:2px solid var(--som-line);border-radius:12px;padding:0 14px;outline:none;color:var(--som-blue-dark);background:#fbfdff}
+.import-controls input:focus{border-color:var(--som-blue);box-shadow:0 0 0 4px rgba(0,90,169,.10)}
+.help-details{border-top:1px solid #edf1f5;padding-top:12px;color:var(--som-muted);font-size:13px}
+.help-details summary{cursor:pointer;font-weight:800;color:var(--som-blue)}
+.week-strip{margin:16px 0 12px;grid-template-columns:48px 1fr 48px}
+.week-arrow{height:48px;border-radius:14px;color:var(--som-blue);font-weight:900}
+.week-arrow:hover{background:var(--som-blue-light);border-color:#b8d5ed}
+.week-label{height:48px;border-radius:14px;color:var(--som-blue-dark);font-size:15px;background:#fff}
+#scheduleGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:start}
+.day-column{background:#fff;border:1px solid var(--som-line);border-radius:16px;overflow:hidden;min-height:210px;box-shadow:var(--som-shadow)}
+.day-head{padding:13px 14px 11px;background:#f7fafc;border-bottom:1px solid #e7edf2;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.day-head strong{text-transform:capitalize;color:var(--som-blue-dark);font-size:14px}
+.day-head span{font-size:12px;color:var(--som-muted);font-weight:700}
+.lesson-card{margin:10px;border-radius:13px;border:1px solid #dbe8f3;background:#f7fbff;padding:11px 12px;box-shadow:none;position:relative}
+.lesson-card:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:5px;background:var(--som-blue)}
+.lesson-time{font-size:11px;font-weight:800;color:var(--som-blue);margin-bottom:6px}
+.lesson-subject{font-size:15px;font-weight:900;color:var(--som-blue-dark);line-height:1.25}
+.lesson-meta{font-size:11px;color:#6c8195;margin-top:7px}
+.no-lessons{padding:28px 14px;text-align:center;color:#a0aebc;font-size:12px}
+.empty-state{margin-top:14px;border:1px dashed #bfd0df;background:#fff;border-radius:18px;padding:38px 20px;text-align:center}
+.empty-state h3{color:var(--som-blue-dark)}
+.fallback-icon{background:var(--som-yellow-soft);color:var(--som-blue);width:58px;height:58px;border-radius:16px}
+.settings-card{border-radius:20px}
+.pill{background:var(--som-yellow-soft);color:#8a6514}
+.pill-green{background:#e6f7ef;color:#16764e}
+.user-chip{color:#73859a}
+
+/* Login mirrors the proportions and visual language of the supplied Somtoday screenshot. */
+.somtoday-auth{background:#eef2f5}
+.som-auth-card{width:min(560px,100%);padding:28px 42px 34px;border-radius:0 0 30px 30px;box-shadow:0 12px 30px rgba(24,33,43,.10);border:0}
+.som-auth-card h1{color:var(--som-blue-dark);font-size:30px;letter-spacing:-.6px;margin:0 0 14px 18px}
+.school-pill{background:var(--som-yellow);height:43px;margin:0 0 17px;border-radius:25px;padding:0 16px 0 22px;color:var(--som-blue-dark)}
+.school-pill button{color:var(--som-blue-dark)}
+.som-form input[type=email]{height:43px;border:2px solid #d7e0e8;background:#fff;color:var(--som-blue-dark)}
+.som-form input[type=email]::placeholder{color:#8295a8}
+.remember-row{color:var(--som-blue-dark)!important}
+.checkmark{background:var(--som-yellow)}
+.som-login-button{background:var(--som-blue);box-shadow:none;width:228px;height:54px;border-radius:14px}
+.som-login-button:hover{background:#004d91}
+.som-auth-help{background:#f6f8fa;color:#6b7e90;border:1px solid #e6edf3}
+
+@media (max-width:1050px){
+  #scheduleGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .app-shell{grid-template-columns:1fr}
+  .sidebar{padding:10px 12px;background:var(--som-blue-dark)}
+  #scheduleGrid{grid-template-columns:1fr}
+  .import-controls{grid-template-columns:1fr}
+  .content{padding:18px}
+  .topbar{padding:17px 18px}
+}
