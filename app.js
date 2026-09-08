@@ -98,11 +98,17 @@ function openLesson(e){
 }
 function openTest(t){openLesson({subject:t.subject,start:dateTime(t),end:t.end?new Date(`${t.date}T${t.end}:00`):dateTime(t),room:"",assessment:t.type,assessmentData:t})}
 
+function gradeSubjectLabel(g){
+  const vak=g?.vak;
+  if(vak && typeof vak==='object') return String(vak.afkorting||vak.code||vak.naam||'').trim();
+  const raw=String(g?.subject||vak||g?.course||g?.courseName||'').trim();
+  return raw.replace(/\s+[|·]\s+.*$/,'').replace(/\s+-\s+(?:[A-ZÀ-ÿ][^|]{1,40})$/,'').trim();
+}
 function normalizeGrades(list){
   return (Array.isArray(list)?list:Object.values(list||{})).map((g,i)=>({
     ...g,
     id:String(g?.id||g?.resultaatId||g?.resultaatkolomId||`grade-${i}-${g?.date||g?.datum||''}`),
-    subject:g?.subject||g?.vak||g?.vak?.naam||g?.vak?.afkorting||'',
+    subject:gradeSubjectLabel(g),
     value:g?.value??g?.grade??g?.resultaat??g?.geldendResultaat??'',
     weight:g?.weight??g?.weging??g?.examenWeging??1,
     date:g?.date||g?.datum||g?.datumInvoer||'',
@@ -148,7 +154,7 @@ function renderGradeYearOptions(){
   sel.value=S.schoolYear;
 }
 function renderGrades(){renderGradeYearOptions();const grades=selectedGrades();const latest=[...grades].sort((a,b)=>(new Date(b.date||0))-(new Date(a.date||0)));const latestEl=$("#gradeLatest"),avgEl=$("#gradeAverages"),ovEl=$("#gradeOverview");$('#gradePeriodHelp').textContent=(S.schoolYear==='ALL'?`Alle ${grades.length} opgeslagen cijfers uit alle leerjaren.`:`Alle ${grades.length} opgeslagen cijfers uit ${S.schoolYear||currentSchoolYear()}.`);if(S.gradeTab==='latest'){if(!latest.length){latestEl.innerHTML='<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Er zijn geen cijfers voor dit leerjaar</strong><span>Nieuwe cijfers verschijnen hier zodra ze aan je account zijn toegevoegd.</span></div>'}else{latestEl.innerHTML=`<div class="grade-list">${latest.map(g=>`<button class="grade-row" data-grade-id="${esc(g.id||'')}"><span class="subject-dot"></span><span class="grade-subject"><strong>${esc(g.subject||g.vak||'Vak')}</strong><small>${esc(g.title||g.omschrijving||'Cijfer')} · ${gradeDate(g)}</small></span><span class="grade-number ${gradeColor(gradeValue(g))}">${fmtGrade(gradeValue(g))}</span></button>`).join('')}</div>`}}
-else if(S.gradeTab==='averages'){const rows=gradeSubjects().map(subject=>{const list=grades.filter(g=>(g.subject||g.vak)===subject);return {subject,avg:calcAverage(list),count:list.length}});avgEl.innerHTML=rows.length?`<div class="average-list">${rows.map(r=>`<button class="average-row" data-subject="${esc(r.subject)}"><span class="subject-icon">${esc(r.subject.slice(0,1).toUpperCase())}</span><strong>${esc(r.subject)}</strong><span class="avg-number ${gradeColor(r.avg)}">${fmtGrade(r.avg)}</span></button>`).join('')}</div>`:'<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Nog geen vakgemiddelden</strong><span>Je vakken worden hier automatisch opgebouwd uit je cijfers.</span></div>'}
+else if(S.gradeTab==='averages'){const rows=gradeSubjects().map(subject=>{const list=grades.filter(g=>(g.subject||g.vak)===subject);return {subject,avg:calcAverage(list),count:list.length}});avgEl.innerHTML=rows.length?`<div class="average-list">${rows.map(r=>`<button class="average-row" data-subject="${esc(r.subject)}"><strong>${esc(r.subject)}</strong><span class="avg-number ${gradeColor(r.avg)}">${fmtGrade(r.avg)}</span></button>`).join('')}</div>`:'<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Nog geen vakgemiddelden</strong><span>Je vakken worden hier automatisch opgebouwd uit je cijfers.</span></div>'}
 else{const byPeriod={};grades.forEach(g=>{const p=g.period||g.periode||'Periode';(byPeriod[p]??=[]).push(g)});const periods=Object.entries(byPeriod);ovEl.innerHTML=periods.length?periods.map(([p,list])=>`<div class="overview-block"><h3>${esc(p)}</h3>${list.sort((a,b)=>(new Date(b.date||0))-(new Date(a.date||0))).map(g=>`<button class="overview-row" data-grade-id="${esc(g.id||'')}"><span class="overview-subject">${esc(g.subject||g.vak||'Vak')}</span><span>${esc(g.title||g.omschrijving||'Cijfer')}</span><span class="grade-number ${gradeColor(gradeValue(g))}">${fmtGrade(gradeValue(g))}</span><span class="weight">×${esc(g.weight||g.weging||1)}</span></button>`).join('')}</div>`).join(''):'<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Geen cijfers in dit leerjaar</strong><span>Je volledige cijferoverzicht verschijnt hier zodra cijfers beschikbaar zijn.</span></div>'}
   $$('.grade-row,.overview-row').forEach(b=>b.onclick=()=>openGrade(S.grades.find(g=>(g.id||'')===b.dataset.gradeId)));$$('.average-row').forEach(b=>b.onclick=()=>openSubjectGrades(b.dataset.subject));
 }
