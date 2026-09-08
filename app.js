@@ -97,23 +97,57 @@ function openLesson(e){
   $("#modal").classList.remove("hidden");
 }
 function openTest(t){openLesson({subject:t.subject,start:dateTime(t),end:t.end?new Date(`${t.date}T${t.end}:00`):dateTime(t),room:"",assessment:t.type,assessmentData:t})}
-async function save(){await set(dbref(),{email:S.email,calendarUrl:S.url,icsText:S.icsText,tests:S.tests,grades:S.grades,updatedAt:Date.now()})}
-async function restore(){try{const s=await get(dbref());if(!s.exists()){setStatus("Je account is aangemaakt. Voeg je iCalendar-link toe.");renderGrades();return}const d=s.val()||{};S.url=d.calendarUrl||"";S.icsText=d.icsText||"";S.tests=Array.isArray(d.tests)?d.tests:Object.values(d.tests||{});S.grades=Array.isArray(d.grades)?d.grades:Object.values(d.grades||{});$("#calendarUrl").value=S.url;if(S.icsText){S.events=parseICS(S.icsText);setStatus(`${S.events.length} lessen, ${S.tests.length} toetsen en ${S.grades.length} cijfers geladen.`)}else setStatus(`${S.tests.length} opgeslagen toetsen en ${S.grades.length} cijfers geladen.`);render();renderGrades()}catch(e){setStatus("Firebase kon het account niet laden. Controleer de openbare Rules.",true);renderGrades()}}
+
+function normalizeGrades(list){
+  return (Array.isArray(list)?list:Object.values(list||{})).map((g,i)=>({
+    ...g,
+    id:String(g?.id||g?.resultaatId||g?.resultaatkolomId||`grade-${i}-${g?.date||g?.datum||''}`),
+    subject:g?.subject||g?.vak||g?.vak?.naam||g?.vak?.afkorting||'',
+    value:g?.value??g?.grade??g?.resultaat??g?.geldendResultaat??'',
+    weight:g?.weight??g?.weging??g?.examenWeging??1,
+    date:g?.date||g?.datum||g?.datumInvoer||'',
+    period:g?.period??g?.periode??'',
+    description:g?.description||g?.omschrijving||''
+  }));
+}
+async function save(){const byYear={};for(const g of normalizeGrades(S.grades)){(byYear[gradeYear(g)]??=[]).push(g)}await set(dbref(),{email:S.email,calendarUrl:S.url,icsText:S.icsText,tests:S.tests,grades:S.grades,gradesByYear:byYear,updatedAt:Date.now()})}
+async function restore(){try{const s=await get(dbref());if(!s.exists()){setStatus("Je account is aangemaakt. Voeg je iCalendar-link toe.");renderGrades();return}const d=s.val()||{};S.url=d.calendarUrl||"";S.icsText=d.icsText||"";S.tests=Array.isArray(d.tests)?d.tests:Object.values(d.tests||{});S.grades=normalizeGrades(d.grades); if(!S.grades.length&&d.gradesByYear) S.grades=normalizeGrades(Object.values(d.gradesByYear).flat());$("#calendarUrl").value=S.url;if(S.icsText){S.events=parseICS(S.icsText);setStatus(`${S.events.length} lessen, ${S.tests.length} toetsen en ${S.grades.length} cijfers geladen.`)}else setStatus(`${S.tests.length} opgeslagen toetsen en ${S.grades.length} cijfers geladen.`);render();renderGrades()}catch(e){setStatus("Firebase kon het account niet laden. Controleer de openbare Rules.",true);renderGrades()}}
 async function loadICS(text){S.icsText=text;S.events=parseICS(text);if(!S.events.length)throw Error("Geen lessen gevonden");await save();setStatus(`${S.events.length} lessen geladen en opgeslagen in Firebase.`);S.week=0;render()}
 async function loadUrl(){let u=$("#calendarUrl").value.trim();if(!u)return setStatus("Plak eerst je Somtoday iCalendar-link.",true);u=u.replace(/^webcal:\/\//i,"https://");S.url=u;setStatus("Rooster ophalen…");try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`HTTP ${r.status}`);await loadICS(await r.text())}catch(e){await save().catch(()=>{});setStatus("Somtoday blokkeert het directe ophalen vanuit de browser (CORS). Gebruik daarom '.ics importeren' om je rooster hier te laden. Je link blijft wel per account bewaard.",true)}}
 function openTab(t){$$('.nav').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));$$('.panel').forEach(p=>p.classList.toggle('active',p.id===t));$("#title").textContent=titles[t];$("#crumb").textContent=titles[t];if(t==="cijfers")renderGrades()}
 
 function currentSchoolYear(){const now=new Date();const y=now.getMonth()>=7?now.getFullYear():now.getFullYear()-1;return `${y}-${String(y+1).slice(-2)}`}
-function gradeYear(g){return String(g.schoolYear||g.year||currentSchoolYear())}
+function gradeYear(g){
+  const raw=g?.schoolYear ?? g?.schooljaar ?? g?.year ?? g?.leerjaar ?? g?.school_year;
+  if(raw && typeof raw==='object') return String(raw.naam||raw.name||raw.label||raw.code||raw.id||currentSchoolYear());
+  const v=String(raw??'').trim();
+  if(v) return v;
+  // Some Somtoday exports store a school year as start/end years.
+  const start=g?.schoolYearStart||g?.schooljaarStart, end=g?.schoolYearEnd||g?.schooljaarEnd;
+  if(start && end) return `${start}/${String(end).slice(-2)}`;
+  return currentSchoolYear();
+}
 function gradeValue(g){const n=Number(String(g.value??g.grade??"").replace(",","."));return Number.isFinite(n)?n:null}
-function selectedGrades(){return S.grades.filter(g=>!S.schoolYear||gradeYear(g)===S.schoolYear)}
+function selectedGrades(){
+  if(!S.schoolYear || S.schoolYear==='ALL') return S.grades;
+  return S.grades.filter(g=>gradeYear(g)===S.schoolYear);
+}
 function calcAverage(list){let sum=0,w=0;for(const g of list){const n=gradeValue(g);if(n==null)continue;const wt=Number(g.weight||g.weging||1)||1;sum+=n*wt;w+=wt}return w?Math.round(sum/w*100)/100:null}
 function gradeSubjects(){const names=new Set(S.events.map(e=>e.subject).filter(Boolean));selectedGrades().forEach(g=>names.add(g.subject||g.vak));return [...names].filter(Boolean).sort((a,b)=>a.localeCompare(b,'nl'))}
 function fmtGrade(n){return n==null?"-":Number.isInteger(n)?String(n):n.toFixed(1).replace('.',',')}
 function gradeColor(n){if(n==null)return '';if(n>=5.5)return 'grade-good';if(n>=5)return 'grade-mid';return 'grade-bad'}
 function gradeDate(g){return g.date?new Intl.DateTimeFormat('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(g.date)):''}
-function renderGradeYearOptions(){const years=[...new Set(S.grades.map(gradeYear))];if(!years.includes(currentSchoolYear()))years.unshift(currentSchoolYear());years.sort((a,b)=>b.localeCompare(a));const sel=$("#schoolYear");sel.innerHTML=years.map(y=>`<option value="${esc(y)}">${esc(y)}</option>`).join('');if(!S.schoolYear||!years.includes(S.schoolYear))S.schoolYear=years[0]||currentSchoolYear();sel.value=S.schoolYear}
-function renderGrades(){renderGradeYearOptions();const grades=selectedGrades();const latest=[...grades].sort((a,b)=>(new Date(b.date||0))-(new Date(a.date||0)));const latestEl=$("#gradeLatest"),avgEl=$("#gradeAverages"),ovEl=$("#gradeOverview");if(S.gradeTab==='latest'){if(!latest.length){latestEl.innerHTML='<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Er zijn geen cijfers voor deze periode</strong><span>Nieuwe cijfers verschijnen hier zodra ze aan je account zijn toegevoegd.</span></div>'}else{latestEl.innerHTML=`<div class="grade-list">${latest.map(g=>`<button class="grade-row" data-grade-id="${esc(g.id||'')}"><span class="subject-dot"></span><span class="grade-subject"><strong>${esc(g.subject||g.vak||'Vak')}</strong><small>${esc(g.title||g.omschrijving||'Cijfer')} · ${gradeDate(g)}</small></span><span class="grade-number ${gradeColor(gradeValue(g))}">${fmtGrade(gradeValue(g))}</span></button>`).join('')}</div>`}}
+function renderGradeYearOptions(){
+  const years=[...new Set(S.grades.map(gradeYear).filter(Boolean))];
+  if(!years.includes(currentSchoolYear())) years.unshift(currentSchoolYear());
+  years.sort((a,b)=>b.localeCompare(a,'nl'));
+  const sel=$("#schoolYear");
+  const opts=[`<option value="ALL">Alle leerjaren</option>`,...years.map(y=>`<option value="${esc(y)}">${esc(y)}</option>`)].join('');
+  sel.innerHTML=opts;
+  if(!S.schoolYear || (S.schoolYear!=='ALL' && !years.includes(S.schoolYear))) S.schoolYear=years[0]||currentSchoolYear();
+  sel.value=S.schoolYear;
+}
+function renderGrades(){renderGradeYearOptions();const grades=selectedGrades();const latest=[...grades].sort((a,b)=>(new Date(b.date||0))-(new Date(a.date||0)));const latestEl=$("#gradeLatest"),avgEl=$("#gradeAverages"),ovEl=$("#gradeOverview");$('#gradePeriodHelp').textContent=(S.schoolYear==='ALL'?`Alle ${grades.length} opgeslagen cijfers uit alle leerjaren.`:`Alle ${grades.length} opgeslagen cijfers uit ${S.schoolYear||currentSchoolYear()}.`);if(S.gradeTab==='latest'){if(!latest.length){latestEl.innerHTML='<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Er zijn geen cijfers voor dit leerjaar</strong><span>Nieuwe cijfers verschijnen hier zodra ze aan je account zijn toegevoegd.</span></div>'}else{latestEl.innerHTML=`<div class="grade-list">${latest.map(g=>`<button class="grade-row" data-grade-id="${esc(g.id||'')}"><span class="subject-dot"></span><span class="grade-subject"><strong>${esc(g.subject||g.vak||'Vak')}</strong><small>${esc(g.title||g.omschrijving||'Cijfer')} · ${gradeDate(g)}</small></span><span class="grade-number ${gradeColor(gradeValue(g))}">${fmtGrade(gradeValue(g))}</span></button>`).join('')}</div>`}}
 else if(S.gradeTab==='averages'){const rows=gradeSubjects().map(subject=>{const list=grades.filter(g=>(g.subject||g.vak)===subject);return {subject,avg:calcAverage(list),count:list.length}});avgEl.innerHTML=rows.length?`<div class="average-list">${rows.map(r=>`<button class="average-row" data-subject="${esc(r.subject)}"><span class="subject-icon">${esc(r.subject.slice(0,1).toUpperCase())}</span><strong>${esc(r.subject)}</strong><span class="avg-number ${gradeColor(r.avg)}">${fmtGrade(r.avg)}</span></button>`).join('')}</div>`:'<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Nog geen vakgemiddelden</strong><span>Je vakken worden hier automatisch opgebouwd uit je cijfers.</span></div>'}
 else{const byPeriod={};grades.forEach(g=>{const p=g.period||g.periode||'Periode';(byPeriod[p]??=[]).push(g)});const periods=Object.entries(byPeriod);ovEl.innerHTML=periods.length?periods.map(([p,list])=>`<div class="overview-block"><h3>${esc(p)}</h3>${list.sort((a,b)=>(new Date(b.date||0))-(new Date(a.date||0))).map(g=>`<button class="overview-row" data-grade-id="${esc(g.id||'')}"><span class="overview-subject">${esc(g.subject||g.vak||'Vak')}</span><span>${esc(g.title||g.omschrijving||'Cijfer')}</span><span class="grade-number ${gradeColor(gradeValue(g))}">${fmtGrade(gradeValue(g))}</span><span class="weight">×${esc(g.weight||g.weging||1)}</span></button>`).join('')}</div>`).join(''):'<div class="empty-grade"><div class="grade-empty-icon">▤</div><strong>Geen cijfers in dit leerjaar</strong><span>Je volledige cijferoverzicht verschijnt hier zodra cijfers beschikbaar zijn.</span></div>'}
   $$('.grade-row,.overview-row').forEach(b=>b.onclick=()=>openGrade(S.grades.find(g=>(g.id||'')===b.dataset.gradeId)));$$('.average-row').forEach(b=>b.onclick=()=>openSubjectGrades(b.dataset.subject));

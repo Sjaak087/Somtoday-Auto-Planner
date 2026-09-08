@@ -1,15 +1,10 @@
 # Mijn Rooster
 
-GitHub Pages-klare roosterpagina in Somtoday-achtige stijl.
+GitHub Pages-klare Somtoday-achtige rooster- en cijferpagina.
 
-## Toetsherkenning
-De site kijkt **niet naar de naam van het vak of de les**. Voor de oranje/rode toetsmarkering wordt alleen de extra metadata van een iCalendar-afspraak gebruikt, zoals `DESCRIPTION`, `CATEGORIES`, `ATTACH` en `X-*` velden.
+## Cijferhistorie
+De Cijfers-tab ondersteunt meerdere schooljaren. Cijfers kunnen worden opgeslagen met een expliciet `schoolYear`/`schooljaar`/`year`/`leerjaar`-veld en worden automatisch onder het juiste leerjaar geplaatst. Er is ook een optie **Alle leerjaren**.
 
-- kleine toets: oranje
-- grote toets / toets: rood
-- klikken op een les/toets opent de details
+De Firebase-opslag houdt zowel `grades` als `gradesByYear` bij per account.
 
-Een losse `Toets`-markering in de extra metadata wordt als kleine toets behandeld, passend bij het oranje toets-icoon uit Somtoday. Een expliciete grote-toetsmarkering heeft voorrang.
-
-## Toetsen toevoegen
-Klik op een les/vak in het rooster en kies **+ Toets toevoegen**. Kies kleine of grote toets. De toets wordt per account opgeslagen in Firebase en de gekoppelde les wordt automatisch oranje of rood weergegeven.
+Let op: de huidige site-login gebruikt alleen het e-mailadres als account-sleutel. Daarmee kan de site niet zelfstandig geautoriseerde Somtoday-cijfers uit een privéaccount ophalen. Voor echte automatische synchronisatie met Somtoday is een Somtoday-authenticatietoken/ondersteunde koppeling nodig. De Somtoday API-documentatie beschrijft afzonderlijke endpoints voor cijfers en schooljaren die authenticatie vereisen. Zie: https://github.com/elisaado/somtoday-api-docs
