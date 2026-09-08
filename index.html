@@ -18,7 +18,7 @@
         <button class="primary full som-login-button" type="submit">Inloggen</button>
         <p id="authMessage" class="auth-message" aria-live="polite"></p>
       </form>
-      <div class="som-auth-help">Dit account is voor jouw eigen SchoolPortaal. Je Somtoday-wachtwoord vul je nooit in op deze site.</div>
+      <div class="som-auth-help">Je e-mailadres wordt gebruikt als jouw accountnaam om je rooster in Firebase te onthouden.</div>
     </div>
   </div>
 
@@ -61,7 +61,7 @@
           <div class="import-card">
             <div>
               <strong>Automatisch met jouw Somtoday-agenda</strong>
-              <p>Somtoday kan voor leerlingen een iCalendar-koppeling beschikbaar maken. Daarin staan je roosterafspraken.</p>
+              <p>Je iCalendar-link wordt één keer aan jouw account gekoppeld. De link én het laatst opgehaalde rooster worden daarna in Firebase bewaard, zodat je volgende keer automatisch verder kunt.</p>
             </div>
             <div class="import-controls">
               <input id="calendarUrl" type="url" placeholder="Plak hier je Somtoday iCalendar-link">
@@ -89,7 +89,7 @@
           <div id="emptyState" class="empty-state">
             <div class="fallback-icon">▦</div>
             <h3>Nog geen rooster geladen</h3>
-            <p>Plak je Somtoday iCalendar-link hierboven of importeer een .ics-bestand om je lessen hier te zien.</p>
+            <p>Plak je Somtoday iCalendar-link hierboven of importeer een .ics-bestand. De gekoppelde link en het rooster worden openbaar per account in Firebase onthouden.</p>
           </div>
         </div>
 
