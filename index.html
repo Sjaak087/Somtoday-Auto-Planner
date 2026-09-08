@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <title>SchoolPortaal — Rooster</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">SP</div>
+        <div>
+          <div class="brand-title">SchoolPortaal</div>
+          <div class="brand-subtitle">Somtoday koppeling</div>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Hoofdnavigatie">
+        <button class="nav-item" data-tab="home"><span class="icon">⌂</span><span>Overzicht</span></button>
+        <button class="nav-item active" data-tab="rooster"><span class="icon">▦</span><span>Rooster</span></button>
+        <button class="nav-item" data-tab="instellingen"><span class="icon">⚙</span><span>Instellingen</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-dot"></div>
+        <div>
+          <strong id="firebaseLabel">Firebase gekoppeld</strong>
+          <small id="firebaseStatus">Controleren…</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="breadcrumb">SchoolPortaal / Rooster</div>
+          <h1 id="pageTitle">Rooster</h1>
+        </div>
+        <a class="somtoday-link" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open Somtoday ↗</a>
+      </header>
+
+      <section class="content">
+        <div id="home" class="tab-panel">
+          <div class="hero-card">
+            <div>
+              <span class="eyebrow">Jouw schoolomgeving</span>
+              <h2>Alles op één plek</h2>
+              <p>Deze GitHub Pages-site is voorbereid op Somtoday en je Firebase Realtime Database.</p>
+              <button class="primary" data-go="rooster">Naar mijn rooster</button>
+            </div>
+            <div class="hero-graphic" aria-hidden="true">
+              <div class="graphic-window"><div></div><div></div><div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="rooster" class="tab-panel active">
+          <div class="toolbar-card">
+            <div class="toolbar-main">
+              <div class="section-kicker">Somtoday</div>
+              <h2>Rooster</h2>
+              <p class="muted">Je Somtoday-rooster wordt hieronder geladen. Je bestaande Somtoday-inlog blijft actief in je browser.</p>
+            </div>
+            <div class="toolbar-actions">
+              <button class="secondary" id="reloadFrame">Vernieuwen</button>
+              <a class="primary link-button" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open volledig</a>
+            </div>
+          </div>
+
+          <div class="week-strip" aria-label="Weeknavigatie">
+            <button class="week-arrow" id="prevWeek" aria-label="Vorige week">‹</button>
+            <div class="week-label" id="weekLabel">Deze week</div>
+            <button class="week-arrow" id="nextWeek" aria-label="Volgende week">›</button>
+          </div>
+
+          <div class="embed-shell">
+            <div class="embed-head">
+              <div class="embed-brand"><span class="mini-dot"></span> Somtoday leerling</div>
+              <span class="embed-hint">Ingebouwde weergave</span>
+            </div>
+            <div class="iframe-wrap">
+              <iframe id="somtodayFrame" title="Somtoday rooster" src="https://leerling.somtoday.nl/rooster" loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+              <div class="iframe-fallback" id="iframeFallback">
+                <div class="fallback-icon">↗</div>
+                <h3>Somtoday staat directe inbedding mogelijk niet toe</h3>
+                <p>Dat wordt bepaald door de beveiligingsheaders van Somtoday. Open Somtoday volledig om je rooster te bekijken.</p>
+                <a class="primary link-button" href="https://leerling.somtoday.nl/rooster" target="_blank" rel="noopener">Open Somtoday</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card">
+              <span class="info-label">Somtoday URL</span>
+              <code>leerling.somtoday.nl/rooster</code>
+            </article>
+            <article class="info-card">
+              <span class="info-label">Firebase</span>
+              <code>somtoday-auto-planner</code>
+            </article>
+          </div>
+        </div>
+
+        <div id="instellingen" class="tab-panel">
+          <div class="settings-card">
+            <div class="section-kicker">Configuratie</div>
+            <h2>Instellingen</h2>
+            <p class="muted">Firebase staat in een los bestand zodat je de configuratie makkelijk kunt aanpassen zonder de rest van de site te wijzigen.</p>
+            <div class="setting-row">
+              <div><strong>Realtime Database</strong><small id="databaseUrlText">Wordt geladen…</small></div>
+              <span class="pill" id="databasePill">Controleren</span>
+            </div>
+            <div class="setting-row">
+              <div><strong>Somtoday rooster</strong><small>https://leerling.somtoday.nl/rooster</small></div>
+              <span class="pill pill-green">Klaar</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
